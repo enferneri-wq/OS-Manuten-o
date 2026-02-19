@@ -4,6 +4,74 @@ import autoTable from "jspdf-autotable";
 import { Equipment, ServiceRecord, Customer, EquipmentStatus } from "../types.ts";
 import { formatDate } from "../utils.ts";
 
+/**
+ * Desenha a logomarca ALVS fielmente no documento PDF
+ */
+const drawLogo = (doc: jsPDF, x: number, y: number, scale: number = 0.5) => {
+  const brandRed = [255, 61, 61];
+  const darkGrey = [51, 51, 51];
+
+  // Triângulo Vermelho Esquerdo
+  doc.setFillColor(brandRed[0], brandRed[1], brandRed[2]);
+  doc.triangle(
+    x + 1 * scale, y + 2 * scale, 
+    x + 7 * scale, y + 2 * scale, 
+    x + 1 * scale, y + 21 * scale, 
+    'F'
+  );
+
+  // Bloco Cinza Principal (Trapézio)
+  doc.setFillColor(darkGrey[0], darkGrey[1], darkGrey[2]);
+  // Use two triangles to draw the trapezoid as fillPoly is not available in standard jsPDF
+  doc.triangle(
+    x + 8 * scale, y + 2 * scale,
+    x + 47 * scale, y + 2 * scale,
+    x + 47 * scale, y + 21 * scale,
+    'F'
+  );
+  doc.triangle(
+    x + 8 * scale, y + 2 * scale,
+    x + 47 * scale, y + 21 * scale,
+    x + 2 * scale, y + 21 * scale,
+    'F'
+  );
+
+  // Texto ALVS
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(38 * scale);
+  doc.text("ALVS", x + 9 * scale, y + 17.5 * scale);
+
+  // Quadrado Vermelho da Cruz
+  doc.setFillColor(brandRed[0], brandRed[1], brandRed[2]);
+  doc.rect(x + 48 * scale, y + 2 * scale, 21 * scale, 21 * scale, 'F');
+
+  // Cruz Branca
+  doc.setFillColor(255, 255, 255);
+  const cw = 21 * scale;
+  const cx = x + 48 * scale;
+  const cy = y + 2 * scale;
+  // Horizontal bar
+  doc.rect(cx + 3 * scale, cy + 8 * scale, 15 * scale, 5 * scale, 'F');
+  // Vertical bar
+  doc.rect(cx + 8 * scale, cy + 3 * scale, 5 * scale, 15 * scale, 'F');
+
+  // Linha de Pulso (EKG) simplificada para o PDF
+  doc.setDrawColor(brandRed[0], brandRed[1], brandRed[2]);
+  doc.setLineWidth(0.3 * scale);
+  doc.line(cx + 3 * scale, cy + 10.5 * scale, cx + 6 * scale, cy + 10.5 * scale);
+  doc.line(cx + 6 * scale, cy + 10.5 * scale, cx + 8 * scale, cy + 5 * scale);
+  doc.line(cx + 8 * scale, cy + 5 * scale, cx + 11 * scale, cy + 16 * scale);
+  doc.line(cx + 11 * scale, cy + 16 * scale, cx + 13 * scale, cy + 10.5 * scale);
+  doc.line(cx + 13 * scale, cy + 10.5 * scale, cx + 18 * scale, cy + 10.5 * scale);
+
+  // Texto Inferior
+  doc.setTextColor(darkGrey[0], darkGrey[1], darkGrey[2]);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10 * scale);
+  doc.text("ENGINEERING & MEDICAL", x + 1 * scale, y + 26 * scale, { charSpace: 0.5 });
+};
+
 export const generateEquipmentReport = (equipment: Equipment, customerName: string) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -12,16 +80,13 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   doc.setFillColor(51, 51, 51); // Dark Grey
   doc.rect(0, 0, pageWidth, 40, 'F');
   doc.setFillColor(255, 61, 61); // Brand Red
-  doc.rect(pageWidth - 60, 0, 60, 40, 'F');
+  doc.rect(pageWidth - 80, 0, 80, 40, 'F');
 
-  // Header Text
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text("ALVS ENGINEERING", 15, 20);
-  doc.setFontSize(14);
-  doc.text("& MEDICAL", 15, 28);
+  // Draw Logo on top of header
+  drawLogo(doc, 15, 5, 1.1);
   
   doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
   doc.text("Relatório Técnico Individual", pageWidth - 15, 20, { align: "right" });
   doc.text(`${formatDate(new Date().toISOString()).split(',')[0]}`, pageWidth - 15, 28, { align: "right" });
 
@@ -86,18 +151,18 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
 
   // Header Styling
   doc.setFillColor(51, 51, 51);
-  doc.rect(0, 0, pageWidth, 35, 'F');
+  doc.rect(0, 0, pageWidth, 40, 'F');
   doc.setFillColor(255, 61, 61);
-  doc.rect(pageWidth - 80, 0, 80, 35, 'F');
+  doc.rect(pageWidth - 100, 0, 100, 40, 'F');
 
-  doc.setFontSize(24);
-  doc.setTextColor(255, 255, 255);
-  doc.text("ALVS ENGINEERING & MEDICAL", 15, 18);
+  // Draw Logo
+  drawLogo(doc, 15, 5, 1.2);
+
   doc.setFontSize(12);
-  doc.text("RELATÓRIO GERENCIAL DE FROTA E ATIVOS", 15, 26);
-  
+  doc.setTextColor(255, 255, 255);
+  doc.text("RELATÓRIO GERENCIAL DE FROTA", pageWidth - 15, 20, { align: "right" });
   doc.setFontSize(10);
-  doc.text(`EMITIDO EM: ${formatDate(new Date().toISOString())}`, pageWidth - 15, 20, { align: "right" });
+  doc.text(`EMISSÃO: ${formatDate(new Date().toISOString())}`, pageWidth - 15, 28, { align: "right" });
 
   // Dashboard Stats Row
   const total = equipments.length;
@@ -106,7 +171,7 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
   const done = equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length;
 
   autoTable(doc, {
-    startY: 45,
+    startY: 50,
     head: [["KPI: TOTAL DE ATIVOS", "KPI: AGUARDANDO", "KPI: EM REPARO", "KPI: CONCLUÍDOS"]],
     body: [[total, pending, progress, done]],
     theme: 'grid',

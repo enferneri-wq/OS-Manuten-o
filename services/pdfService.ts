@@ -8,47 +8,55 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(30, 64, 175);
-  doc.text("ALVS ENGINEERING & MEDICAL", 105, 20, { align: "center" });
+  // Branding Header Rectangles
+  doc.setFillColor(51, 51, 51); // Dark Grey
+  doc.rect(0, 0, pageWidth, 40, 'F');
+  doc.setFillColor(255, 61, 61); // Brand Red
+  doc.rect(pageWidth - 60, 0, 60, 40, 'F');
+
+  // Header Text
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text("ALVS ENGINEERING", 15, 20);
+  doc.setFontSize(14);
+  doc.text("& MEDICAL", 15, 28);
   
   doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text("Relatório Técnico de Equipamento", 105, 28, { align: "center" });
-  doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, pageWidth - 20, 15, { align: "right" });
+  doc.text("Relatório Técnico Individual", pageWidth - 15, 20, { align: "right" });
+  doc.text(`${formatDate(new Date().toISOString()).split(',')[0]}`, pageWidth - 15, 28, { align: "right" });
 
-  // Equipment Details
+  // Equipment Details Section
   doc.setFontSize(14);
-  doc.setTextColor(0);
-  doc.text("Informações do Ativo", 20, 45);
-  doc.setLineWidth(0.5);
-  doc.line(20, 47, 190, 47);
+  doc.setTextColor(51, 51, 51);
+  doc.text("Informações do Ativo Hospitalar", 15, 55);
+  doc.setDrawColor(255, 61, 61);
+  doc.setLineWidth(1);
+  doc.line(15, 58, 80, 58);
 
   const equipData = [
-    ["Código ALVS", equipment.code],
-    ["Equipamento", equipment.name],
-    ["Marca/Modelo", `${equipment.brand} / ${equipment.model}`],
-    ["Fabricante", equipment.manufacturer],
-    ["Nº de Série", equipment.serialNumber],
-    ["Unidade/Cliente", customerName],
-    ["Status Atual", equipment.status],
-    ["Data de Entrada", formatDate(equipment.entryDate)],
+    ["CÓDIGO INTERNO", equipment.code],
+    ["EQUIPAMENTO", equipment.name.toUpperCase()],
+    ["MARCA/MODELO", `${equipment.brand} / ${equipment.model}`.toUpperCase()],
+    ["Nº DE SÉRIE", equipment.serialNumber],
+    ["UNIDADE SOLICITANTE", customerName.toUpperCase()],
+    ["STATUS OPERACIONAL", equipment.status],
+    ["DATA DE ENTRADA", formatDate(equipment.entryDate)],
   ];
 
   autoTable(doc, {
-    startY: 52,
-    head: [["Atributo", "Detalhes"]],
+    startY: 65,
+    head: [["PARÂMETRO", "ESPECIFICAÇÃO TÉCNICA"]],
     body: equipData,
     theme: 'striped',
-    headStyles: { fillColor: [30, 64, 175] }
+    headStyles: { fillColor: [51, 51, 51], textColor: [255, 255, 255] },
+    alternateRowStyles: { fillColor: [248, 250, 252] }
   });
 
   // Service History
   const lastY = (doc as any).lastAutoTable.finalY + 15;
   doc.setFontSize(14);
-  doc.text("Histórico de Intervenções", 20, lastY);
-  doc.line(20, lastY + 2, 190, lastY + 2);
+  doc.text("Histórico de Intervenções e Manutenções", 15, lastY);
+  doc.line(15, lastY + 3, 110, lastY + 3);
 
   const serviceData = equipment.serviceRecords.map((s: ServiceRecord) => [
     formatDate(s.date),
@@ -56,91 +64,92 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   ]);
 
   autoTable(doc, {
-    startY: lastY + 7,
-    head: [["Data/Hora", "Descrição Técnica do Serviço"]],
-    body: serviceData.length > 0 ? serviceData : [["-", "Nenhuma ordem de serviço registrada"]],
+    startY: lastY + 8,
+    head: [["DATA/HORA", "DESCRIÇÃO DOS PROCEDIMENTOS REALIZADOS"]],
+    body: serviceData.length > 0 ? serviceData : [["-", "Nenhuma intervenção técnica registrada até o momento."]],
     theme: 'grid',
-    headStyles: { fillColor: [71, 85, 105] }
+    headStyles: { fillColor: [255, 61, 61], textColor: [255, 255, 255] }
   });
 
-  doc.save(`ALVS_Relatorio_${equipment.code}.pdf`);
+  // Footer
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text("ALVS Engineering & Medical - Soluções em Gestão Hospitalar e Engenharia Clínica", pageWidth / 2, pageHeight - 10, { align: "center" });
+
+  doc.save(`ALVS_Laudo_${equipment.code}.pdf`);
 };
 
 export const generateGlobalReport = (equipments: Equipment[], customers: Customer[]) => {
   const doc = new jsPDF({ orientation: 'landscape' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
-  doc.setFontSize(22);
-  doc.setTextColor(30, 64, 175);
-  doc.text("ALVS ENGINEERING & MEDICAL", pageWidth / 2, 20, { align: "center" });
-  
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text("Relatório Gerencial Completo de Engenharia Clínica", pageWidth / 2, 28, { align: "center" });
-  doc.text(`Data de Emissão: ${formatDate(new Date().toISOString())}`, pageWidth - 20, 15, { align: "right" });
+  // Header Styling
+  doc.setFillColor(51, 51, 51);
+  doc.rect(0, 0, pageWidth, 35, 'F');
+  doc.setFillColor(255, 61, 61);
+  doc.rect(pageWidth - 80, 0, 80, 35, 'F');
 
-  // Resumo Executivo
+  doc.setFontSize(24);
+  doc.setTextColor(255, 255, 255);
+  doc.text("ALVS ENGINEERING & MEDICAL", 15, 18);
+  doc.setFontSize(12);
+  doc.text("RELATÓRIO GERENCIAL DE FROTA E ATIVOS", 15, 26);
+  
+  doc.setFontSize(10);
+  doc.text(`EMITIDO EM: ${formatDate(new Date().toISOString())}`, pageWidth - 15, 20, { align: "right" });
+
+  // Dashboard Stats Row
   const total = equipments.length;
   const pending = equipments.filter(e => e.status === EquipmentStatus.PENDING).length;
   const progress = equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length;
   const done = equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length;
 
-  doc.setFontSize(14);
-  doc.setTextColor(0);
-  doc.text("Resumo da Frota", 20, 45);
-  doc.setLineWidth(0.5);
-  doc.line(20, 47, pageWidth - 20, 47);
-
   autoTable(doc, {
-    startY: 52,
-    head: [["Total de Ativos", "Aguardando Serviço", "Em Manutenção", "Concluídos"]],
+    startY: 45,
+    head: [["KPI: TOTAL DE ATIVOS", "KPI: AGUARDANDO", "KPI: EM REPARO", "KPI: CONCLUÍDOS"]],
     body: [[total, pending, progress, done]],
     theme: 'grid',
-    headStyles: { fillColor: [30, 64, 175], halign: 'center' },
-    bodyStyles: { halign: 'center', fontSize: 12, fontStyle: 'bold' }
+    headStyles: { fillColor: [255, 61, 61], textColor: [255, 255, 255], halign: 'center' },
+    bodyStyles: { halign: 'center', fontSize: 14, fontStyle: 'bold' }
   });
 
-  // Tabela Detalhada de Ativos
+  // Full Inventory Table
   const currentY = (doc as any).lastAutoTable.finalY + 15;
-  doc.setFontSize(14);
-  doc.text("Inventário Detalhado", 20, currentY);
-  doc.line(20, currentY + 2, pageWidth - 20, currentY + 2);
-
   const tableData = equipments.map(e => [
     e.code,
-    e.name,
-    `${e.brand} / ${e.model}`,
+    e.name.toUpperCase(),
+    `${e.brand} / ${e.model}`.toUpperCase(),
     customers.find(c => c.id === e.customerId)?.name || "N/A",
     e.status,
     formatDate(e.entryDate).split(',')[0]
   ]);
 
   autoTable(doc, {
-    startY: currentY + 7,
+    startY: currentY,
     head: [["CÓDIGO", "EQUIPAMENTO", "MARCA/MODELO", "UNIDADE DE SAÚDE", "STATUS", "ENTRADA"]],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [71, 85, 105], fontSize: 10 },
+    headStyles: { fillColor: [51, 51, 51], fontSize: 10, textColor: [255, 255, 255] },
     columnStyles: {
-      0: { cellWidth: 35 },
+      0: { fontStyle: 'bold', cellWidth: 40 },
       4: { fontStyle: 'bold' }
     }
   });
 
-  // Rodapé em todas as páginas
+  // Pagination Footer
   const pageCount = (doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} - ALVS Engineering & Medical - Software de Gestão Hospitalar`,
+      `Página ${i} de ${pageCount} - ALVS Engineering & Medical - Software Proprietário`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: "center" }
     );
   }
 
-  doc.save(`ALVS_Relatorio_Geral_${new Date().getTime()}.pdf`);
+  doc.save(`ALVS_Relatorio_Consolidado.pdf`);
 };

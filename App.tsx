@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  LayoutDashboard, Stethoscope, Users, Search, 
+  LayoutDashboard, Users, Search, 
   Plus, FileText, Wrench, 
   CheckCircle2, AlertCircle, Building2, 
   HardDrive, BarChart3, PieChart as PieChartIcon,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
-  Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
+  Tooltip, BarChart, Bar, XAxis, YAxis
 } from 'recharts';
 import { 
   Equipment, Customer, EquipmentStatus, 
@@ -29,6 +29,19 @@ const INITIAL_CUSTOMERS: Customer[] = [
   { id: 'c1', name: 'Hospital das Clínicas', taxId: '12.345.678/0001-90', email: 'contato@hc.org', phone: '(11) 98888-7777', address: 'Av. Paulista, 1000' },
   { id: 'c2', name: 'Clínica Saúde Vital', taxId: '98.765.432/0001-21', email: 'adm@saudevital.com', phone: '(11) 97777-6666', address: 'Rua das Flores, 45' },
 ];
+
+// Componente Logo SVG baseado na imagem fornecida
+const Logo = ({ className = "h-12" }: { className?: string }) => (
+  <svg viewBox="0 0 320 120" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="180" height="70" fill="#333333" />
+    <text x="25" y="65" fill="white" style={{ font: 'bold 55px Arial, sans-serif', letterSpacing: '-2px' }}>ALVS</text>
+    <rect x="195" y="10" width="70" height="70" fill="#FF3D3D" />
+    <path d="M210 45H225V30H235V45H250V55H235V70H225V55H210V45Z" fill="white" />
+    <path d="M210 50L220 50L225 35L232 65L240 50L250 50" stroke="#FF3D3D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path d="M215 50L222 50L226 38L233 62L238 50L245 50" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <text x="10" y="105" fill="#444444" style={{ font: '500 18px Arial, sans-serif', letterSpacing: '4px' }}>ENGINEERING & MEDICAL</text>
+  </svg>
+);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'equipment' | 'customers'>('dashboard');
@@ -82,7 +95,6 @@ export default function App() {
   }, [equipments, customers]);
 
   const stats = useMemo(() => {
-    // Dados para o Gráfico de Rosca (Status)
     const statusCounts = equipments.reduce((acc: any, curr) => {
       acc[curr.status] = (acc[curr.status] || 0) + 1;
       return acc;
@@ -94,7 +106,6 @@ export default function App() {
       { name: 'Concluído', value: statusCounts[EquipmentStatus.COMPLETED] || 0, color: '#10B981' },
     ].filter(d => d.value > 0);
 
-    // Dados para o Gráfico de Barras (Ativos por Cliente)
     const customerCounts = equipments.reduce((acc: any, curr) => {
       const customer = customers.find(c => c.id === curr.customerId);
       const name = customer ? customer.name : 'Outros';
@@ -135,16 +146,13 @@ export default function App() {
 
     setEquipments([newItem, ...equipments]);
     setIsEquipModalOpen(false);
-
     try {
       await fetch(`${API_URL}?action=add_equipment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItem)
       });
-    } catch (err) {
-      console.warn("Offline: Salvo localmente");
-    }
+    } catch (err) { console.warn("Offline"); }
   };
 
   const handleAddCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -161,16 +169,13 @@ export default function App() {
 
     setCustomers([newCust, ...customers]);
     setIsCustomerModalOpen(false);
-
     try {
       await fetch(`${API_URL}?action=add_customer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCust)
       });
-    } catch (err) {
-      console.warn("Offline: Cliente salvo localmente");
-    }
+    } catch (err) { console.warn("Offline"); }
   };
 
   const handleAddService = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -198,16 +203,13 @@ export default function App() {
     });
     setEquipments(updated);
     setIsServiceModalOpen(false);
-
     try {
       await fetch(`${API_URL}?action=add_service`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newRecord, newStatus })
       });
-    } catch (err) {
-      console.warn("Offline: Serviço salvo localmente");
-    }
+    } catch (err) { console.warn("Offline"); }
   };
 
   const handleAiAdvice = async (equip: Equipment) => {
@@ -225,21 +227,14 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-inter text-slate-900">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-28 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
-        <div className="mb-10 text-center">
-          <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-200 inline-block mb-3">
-            <Stethoscope size={28} strokeWidth={2.5} />
-          </div>
-          <div className="px-2">
-            <h2 className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-tight">
-              ALVS<br/>Engineering
-            </h2>
-          </div>
+      <aside className="hidden md:flex w-32 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
+        <div className="mb-10 px-2">
+          <Logo className="w-24" />
         </div>
         
         <nav className="flex-1 flex flex-col gap-6">
           <SidebarIcon icon={LayoutDashboard} label="Painel" id="dashboard" activeTab={activeTab} onClick={setActiveTab} />
-          <SidebarIcon icon={Wrench} label="Equipamentos" id="equipment" activeTab={activeTab} onClick={setActiveTab} />
+          <SidebarIcon icon={Wrench} label="Ativos" id="equipment" activeTab={activeTab} onClick={setActiveTab} />
           <SidebarIcon icon={Users} label="Unidades" id="customers" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
 
@@ -251,16 +246,16 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-20 md:pb-0">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 flex items-center justify-between z-30 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="md:hidden bg-blue-600 p-2 rounded-xl text-white">
-              <Stethoscope size={20} />
+            <div className="md:hidden">
+              <Logo className="h-8" />
             </div>
-            <h1 className="text-sm md:text-xl font-black text-slate-800 tracking-tight uppercase truncate">
-              {activeTab === 'dashboard' ? 'Status de Engenharia' : activeTab === 'equipment' ? 'Ativos' : 'Unidades'}
+            <h1 className="hidden sm:block text-sm md:text-lg font-black text-slate-800 tracking-tight uppercase truncate">
+              {activeTab === 'dashboard' ? 'Status Engenharia' : activeTab === 'equipment' ? 'Ativos Hospitalares' : 'Unidades de Saúde'}
             </h1>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
-            <div className="relative hidden sm:block lg:block">
+            <div className="relative hidden sm:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" placeholder="Buscar..." 
@@ -269,15 +264,11 @@ export default function App() {
               />
             </div>
             
-            <button 
-              onClick={syncData} 
-              title="Sincronizar"
-              className="p-2 text-slate-400 hover:text-blue-600 transition-all bg-slate-50 rounded-xl"
-            >
+            <button onClick={syncData} className="p-2 text-slate-400 hover:text-blue-600 transition-all bg-slate-50 rounded-xl">
               <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
             </button>
 
-            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg border-2 border-white shrink-0" title="Administrador">AV</div>
+            <div className="h-10 w-10 bg-slate-800 rounded-xl flex items-center justify-center font-bold text-white shadow-lg border-2 border-white shrink-0">AV</div>
           </div>
         </header>
 
@@ -285,7 +276,7 @@ export default function App() {
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 animate-pulse">
                <RefreshCw size={48} className="animate-spin text-blue-500" />
-               <p className="font-black text-[10px] uppercase tracking-widest">Sincronizando...</p>
+               <p className="font-black text-[10px] uppercase tracking-widest">Sincronizando Dados...</p>
             </div>
           ) : (
             <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -302,16 +293,15 @@ export default function App() {
                       onClick={() => generateGlobalReport(equipments, customers)}
                       className="w-full md:w-auto px-6 py-4 bg-white border border-slate-200 rounded-3xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 group"
                     >
-                      <Download size={18} className="text-blue-600 group-hover:scale-110 transition-transform" /> 
-                      Relatório Geral (PDF)
+                      <Download size={18} className="text-red-600 group-hover:scale-110 transition-transform" /> 
+                      Gerar Relatório Completo
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Gráfico de Status (Donut) */}
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2">
-                        <PieChartIcon size={14} className="text-blue-500" /> Status Operacional
+                        <PieChartIcon size={14} className="text-red-500" /> Status Operacional
                       </h3>
                       <div className="w-full h-64">
                         <ResponsiveContainer width="100%" height="100%">
@@ -336,10 +326,9 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Gráfico de Barras (Ativos por Unidade) */}
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
                        <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2">
-                        <BarChart3 size={14} className="text-indigo-500" /> Ativos por Unidade
+                        <BarChart3 size={14} className="text-slate-800" /> Ativos por Unidade
                       </h3>
                       <div className="w-full h-72">
                         <ResponsiveContainer width="100%" height="100%">
@@ -347,21 +336,20 @@ export default function App() {
                             <XAxis type="number" hide />
                             <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} axisLine={false} tickLine={false} />
                             <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                            <Bar dataKey="total" fill="#3B82F6" radius={[0, 8, 8, 0]} barSize={20} />
+                            <Bar dataKey="total" fill="#FF3D3D" radius={[0, 8, 8, 0]} barSize={20} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
 
-                    {/* Histórico Recente */}
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
-                        <History size={14} className="text-indigo-500" /> Atividades Recentes
+                        <History size={14} className="text-slate-800" /> Atividades Recentes
                       </h3>
                       <div className="space-y-4">
                         {stats.recentServices.length > 0 ? stats.recentServices.map((service) => (
                           <div key={service.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all">
-                            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 shrink-0">
                               <Wrench size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -389,11 +377,11 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800">Inventário de Ativos</h3>
-                      <p className="text-xs text-slate-400 font-medium">Controle central — {filteredEquipments.length} itens</p>
+                      <h3 className="text-lg font-black text-slate-800">Inventário Técnico</h3>
+                      <p className="text-xs text-slate-400 font-medium">Controle central de ativos — {filteredEquipments.length} itens</p>
                     </div>
-                    <button onClick={() => setIsEquipModalOpen(true)} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
-                      <Plus size={20} /> Registrar Novo
+                    <button onClick={() => setIsEquipModalOpen(true)} className="w-full md:w-auto bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-100 active:scale-95">
+                      <Plus size={20} /> Registrar Equipamento
                     </button>
                   </div>
                   
@@ -405,7 +393,7 @@ export default function App() {
                             {equip.status}
                           </span>
                           <div className="flex gap-2">
-                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm">
                               <Wrench size={16} />
                             </button>
                             <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '')} className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm">
@@ -414,21 +402,21 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 className="text-md font-black text-slate-800 group-hover:text-blue-600 transition-colors truncate">{equip.name}</h4>
+                        <h4 className="text-md font-black text-slate-800 group-hover:text-red-600 transition-colors truncate">{equip.name}</h4>
                         <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-6 flex items-center gap-2">
-                           <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" /> {equip.code}
+                           <div className="w-1.5 h-1.5 bg-red-500 rounded-full" /> {equip.code}
                         </p>
                         
                         <div className="space-y-2 text-[11px] text-slate-600 bg-slate-50/50 p-4 rounded-xl mb-6 border border-slate-100/50">
-                          <div className="flex items-center gap-2 font-semibold truncate"><Building2 size={12} className="text-blue-400 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
-                          <div className="flex items-center gap-2 font-semibold truncate"><HardDrive size={12} className="text-indigo-400 shrink-0" /> {equip.brand} {equip.model}</div>
+                          <div className="flex items-center gap-2 font-semibold truncate"><Building2 size={12} className="text-red-400 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
+                          <div className="flex items-center gap-2 font-semibold truncate"><HardDrive size={12} className="text-slate-400 shrink-0" /> {equip.brand} {equip.model}</div>
                         </div>
 
                         <button 
                           onClick={() => handleAiAdvice(equip)} 
-                          className="mt-auto w-full py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                          className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg shadow-slate-100"
                         >
-                          <Sparkles size={12} /> Diagnóstico IA
+                          <Sparkles size={12} /> Consultar IA
                         </button>
                       </div>
                     ))}
@@ -441,10 +429,10 @@ export default function App() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-800">Unidades de Saúde</h3>
-                      <p className="text-xs text-slate-400 font-medium">Gestão de clientes — {customers.length} unidades</p>
+                      <p className="text-xs text-slate-400 font-medium">Gestão de clientes e unidades — {customers.length} unidades</p>
                     </div>
-                    <button onClick={() => setIsCustomerModalOpen(true)} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
-                      <Plus size={20} /> Adicionar Unidade
+                    <button onClick={() => setIsCustomerModalOpen(true)} className="w-full md:w-auto bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-red-100 active:scale-95">
+                      <Plus size={20} /> Nova Unidade
                     </button>
                   </div>
 
@@ -452,21 +440,19 @@ export default function App() {
                      {customers.map(c => (
                        <div key={c.id} className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 text-left hover:shadow-2xl transition-all group flex flex-col gap-6">
                           <div className="flex justify-between items-start">
-                             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
+                             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all shrink-0">
                                <Building2 size={24} />
                              </div>
-                             <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full uppercase tracking-tighter">
-                               Ativo
-                             </div>
+                             <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full uppercase tracking-tighter">Ativa</div>
                           </div>
                           <div className="min-w-0">
                             <p className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">{c.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{c.taxId}</p>
                           </div>
                           <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-blue-400 shrink-0" /> {c.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-blue-400 shrink-0" /> {c.phone}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-blue-400 shrink-0" /> {c.address}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-red-400 shrink-0" /> {c.email}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-red-400 shrink-0" /> {c.phone}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-red-400 shrink-0" /> {c.address}</div>
                           </div>
                        </div>
                      ))}
@@ -478,14 +464,13 @@ export default function App() {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around h-20 px-4 z-50 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)]">
         <MobileNavItem icon={LayoutDashboard} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         <MobileNavItem icon={Wrench} label="Ativos" active={activeTab === 'equipment'} onClick={() => setActiveTab('equipment')} />
         <MobileNavItem icon={Users} label="Unidades" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
       </nav>
 
-      {/* Modals */}
+      {/* Modals e Componentes de IA permanecem iguais com ajustes de cor para Vermelho/Cinza */}
       {isEquipModalOpen && (
         <Modal title="Novo Ativo" onClose={() => setIsEquipModalOpen(false)}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
@@ -497,7 +482,7 @@ export default function App() {
             </div>
             <FormInput label="Número de Série" name="serialNumber" placeholder="SN-XXXXXXXX" required />
             <FormTextArea label="Laudo de Entrada / Observações" name="observations" placeholder="Estado inicial..." />
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all">Registrar Equipamento</button>
+            <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-100 hover:bg-black transition-all">Registrar Equipamento</button>
           </form>
         </Modal>
       )}
@@ -512,36 +497,36 @@ export default function App() {
               <FormInput label="E-mail" name="email" type="email" placeholder="contato@exemplo.com" />
             </div>
             <FormTextArea label="Endereço Completo" name="address" placeholder="Rua, Número, Bairro, Cidade..." />
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all">Salvar Unidade</button>
+            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Salvar Unidade</button>
           </form>
         </Modal>
       )}
 
       {isServiceModalOpen && selectedEquipment && (
         <Modal title="Ordem de Serviço" onClose={() => setIsServiceModalOpen(false)}>
-          <div className="bg-blue-50 p-6 rounded-[24px] mb-8 border border-blue-100">
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Equipamento</p>
-            <p className="text-sm font-bold text-slate-800">{selectedEquipment.name} — <span className="font-mono text-blue-600">{selectedEquipment.code}</span></p>
+          <div className="bg-red-50 p-6 rounded-[24px] mb-8 border border-red-100">
+            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Equipamento em Atendimento</p>
+            <p className="text-sm font-bold text-slate-800">{selectedEquipment.name} — <span className="font-mono text-red-600">{selectedEquipment.code}</span></p>
           </div>
           <form onSubmit={handleAddService} className="space-y-6">
-            <FormTextArea label="Procedimentos Realizados" name="description" placeholder="Ações corretivas/preventivas..." required />
-            <FormSelect label="Status" name="status" defaultValue={selectedEquipment.status} options={[
+            <FormTextArea label="Procedimentos Realizados" name="description" placeholder="Descreva as ações técnicas..." required />
+            <FormSelect label="Novo Status" name="status" defaultValue={selectedEquipment.status} options={[
               { value: EquipmentStatus.PENDING, label: 'Aguardando Peças' },
               { value: EquipmentStatus.IN_PROGRESS, label: 'Em Manutenção' },
               { value: EquipmentStatus.COMPLETED, label: 'Liberado / Concluído' },
             ]} />
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all">Salvar Intervenção</button>
+            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Salvar Intervenção</button>
           </form>
         </Modal>
       )}
 
       {aiAdvice && (
         <div className="fixed bottom-24 md:bottom-10 right-4 md:right-10 z-[100] max-w-sm animate-in slide-in-from-right duration-500">
-          <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-2xl border border-indigo-100 relative overflow-hidden">
-             <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600"></div>
-             <div className="flex items-center gap-3 mb-4 text-indigo-600">
-               <div className="bg-indigo-50 p-2 rounded-xl"><Sparkles size={20} /></div>
-               <span className="font-black text-[10px] uppercase tracking-widest">IA Gemini</span>
+          <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-2xl border border-red-100 relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+             <div className="flex items-center gap-3 mb-4 text-red-600">
+               <div className="bg-red-50 p-2 rounded-xl"><Sparkles size={20} /></div>
+               <span className="font-black text-[10px] uppercase tracking-widest">Diagnóstico IA</span>
                <button onClick={() => setAiAdvice(null)} className="ml-auto text-slate-300 hover:text-red-500 transition-colors"><X size={20} /></button>
              </div>
              <p className="text-xs text-slate-700 leading-relaxed font-medium italic">"{aiAdvice}"</p>
@@ -552,8 +537,8 @@ export default function App() {
       {isLoadingAi && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
            <div className="bg-white p-12 rounded-[48px] shadow-2xl flex flex-col items-center">
-              <div className="w-12 h-12 border-[5px] border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">Consultando IA...</p>
+              <div className="w-12 h-12 border-[5px] border-red-100 border-t-red-600 rounded-full animate-spin"></div>
+              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">IA Processando...</p>
            </div>
         </div>
       )}
@@ -566,7 +551,7 @@ function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) 
   return (
     <button 
       onClick={() => onClick(id)} 
-      className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all relative group ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : color || 'text-slate-300 hover:bg-slate-50 hover:text-blue-600'}`}
+      className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all relative group ${active ? 'bg-red-600 text-white shadow-xl shadow-red-200' : color || 'text-slate-300 hover:bg-slate-50 hover:text-red-600'}`}
     >
       <Icon size={24} strokeWidth={active ? 2.5 : 2} />
       <div className="absolute left-20 bg-slate-800 text-white text-[9px] font-black uppercase px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100] tracking-widest shadow-xl">
@@ -580,20 +565,20 @@ function MobileNavItem({ icon: Icon, label, active, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 w-20 transition-all ${active ? 'text-blue-600 scale-110' : 'text-slate-300'}`}
+      className={`flex flex-col items-center justify-center gap-1 w-20 transition-all ${active ? 'text-red-600 scale-110' : 'text-slate-300'}`}
     >
       <Icon size={22} strokeWidth={active ? 2.5 : 2} />
       <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
-      {active && <div className="w-1 h-1 bg-blue-600 rounded-full mt-0.5" />}
+      {active && <div className="w-1 h-1 bg-red-600 rounded-full mt-0.5" />}
     </button>
   );
 }
 
 function StatCard({ label, value, icon: Icon, color }: any) {
   const colorMap: any = {
-    blue: 'text-blue-600 bg-blue-50 border-blue-100',
+    blue: 'text-slate-800 bg-slate-50 border-slate-100',
     amber: 'text-amber-600 bg-amber-50 border-amber-100',
-    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    indigo: 'text-red-600 bg-red-50 border-red-100',
     emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
   };
   return (
@@ -627,7 +612,7 @@ function FormInput({ label, ...props }: any) {
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-      <input {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-medium" />
+      <input {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all text-sm font-medium" />
     </div>
   );
 }
@@ -637,7 +622,7 @@ function FormSelect({ label, options, ...props }: any) {
     <div className="space-y-1.5">
       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
       <div className="relative">
-        <select {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-sm font-bold appearance-none cursor-pointer pr-12">
+        <select {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none text-sm font-bold appearance-none cursor-pointer pr-12">
           {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
@@ -652,7 +637,7 @@ function FormTextArea({ label, ...props }: any) {
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-      <textarea rows={3} {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-medium resize-none" />
+      <textarea rows={3} {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all text-sm font-medium resize-none" />
     </div>
   );
 }
@@ -660,7 +645,7 @@ function FormTextArea({ label, ...props }: any) {
 function getStatusBadge(status: EquipmentStatus) {
   switch (status) {
     case EquipmentStatus.PENDING: return 'bg-amber-50 text-amber-600 border-amber-100';
-    case EquipmentStatus.IN_PROGRESS: return 'bg-blue-50 text-blue-600 border-blue-100';
+    case EquipmentStatus.IN_PROGRESS: return 'bg-red-50 text-red-600 border-red-100';
     case EquipmentStatus.COMPLETED: return 'bg-emerald-50 text-emerald-600 border-emerald-100';
     default: return 'bg-slate-50 text-slate-700 border-slate-100';
   }

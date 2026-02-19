@@ -6,7 +6,8 @@ import {
   CheckCircle2, AlertCircle, Building2, 
   HardDrive, BarChart3, PieChart as PieChartIcon,
   LogOut, X, History, ArrowRight,
-  Sparkles, RefreshCw, MapPin, Phone, Mail
+  Sparkles, RefreshCw, MapPin, Phone, Mail,
+  Download
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
@@ -17,7 +18,7 @@ import {
   ServiceRecord 
 } from './types.ts';
 import { generateUniqueCode, generateUUID, formatDate } from './utils.ts';
-import { generateEquipmentReport } from './services/pdfService.ts';
+import { generateEquipmentReport, generateGlobalReport } from './services/pdfService.ts';
 import { getMaintenanceAdvice } from './services/geminiService.ts';
 
 const API_URL = 'api.php';
@@ -290,11 +291,20 @@ export default function App() {
             <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
               {activeTab === 'dashboard' && (
                 <div className="space-y-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    <StatCard label="Total Ativos" value={equipments.length} icon={HardDrive} color="blue" />
-                    <StatCard label="Pendentes" value={equipments.filter(e => e.status === EquipmentStatus.PENDING).length} icon={AlertCircle} color="amber" />
-                    <StatCard label="Em Reparo" value={equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length} icon={Wrench} color="indigo" />
-                    <StatCard label="Concluídos" value={equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length} icon={CheckCircle2} color="emerald" />
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 flex-1">
+                      <StatCard label="Total Ativos" value={equipments.length} icon={HardDrive} color="blue" />
+                      <StatCard label="Pendentes" value={equipments.filter(e => e.status === EquipmentStatus.PENDING).length} icon={AlertCircle} color="amber" />
+                      <StatCard label="Em Reparo" value={equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length} icon={Wrench} color="indigo" />
+                      <StatCard label="Concluídos" value={equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length} icon={CheckCircle2} color="emerald" />
+                    </div>
+                    <button 
+                      onClick={() => generateGlobalReport(equipments, customers)}
+                      className="w-full md:w-auto px-6 py-4 bg-white border border-slate-200 rounded-3xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 group"
+                    >
+                      <Download size={18} className="text-blue-600 group-hover:scale-110 transition-transform" /> 
+                      Relatório Geral (PDF)
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -343,7 +353,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Histórico Recente (Ajustado para o grid) */}
+                    {/* Histórico Recente */}
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
                         <History size={14} className="text-indigo-500" /> Atividades Recentes

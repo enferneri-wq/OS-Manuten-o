@@ -30,16 +30,30 @@ const INITIAL_CUSTOMERS: Customer[] = [
   { id: 'c2', name: 'Clínica Saúde Vital', taxId: '98.765.432/0001-21', email: 'adm@saudevital.com', phone: '(11) 97777-6666', address: 'Rua das Flores, 45' },
 ];
 
-// Componente Logo SVG baseado na imagem fornecida
+// Componente Logo SVG Refinado com Alta Fidelidade à Imagem
 const Logo = ({ className = "h-12" }: { className?: string }) => (
-  <svg viewBox="0 0 320 120" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="10" y="10" width="180" height="70" fill="#333333" />
-    <text x="25" y="65" fill="white" style={{ font: 'bold 55px Arial, sans-serif', letterSpacing: '-2px' }}>ALVS</text>
-    <rect x="195" y="10" width="70" height="70" fill="#FF3D3D" />
-    <path d="M210 45H225V30H235V45H250V55H235V70H225V55H210V45Z" fill="white" />
-    <path d="M210 50L220 50L225 35L232 65L240 50L250 50" stroke="#FF3D3D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    <path d="M215 50L222 50L226 38L233 62L238 50L245 50" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <text x="10" y="105" fill="#444444" style={{ font: '500 18px Arial, sans-serif', letterSpacing: '4px' }}>ENGINEERING & MEDICAL</text>
+  <svg viewBox="0 0 350 140" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Triângulo Vermelho Esquerdo */}
+    <path d="M5 10L35 10L5 105L5 10Z" fill="#FF3D3D" />
+    
+    {/* Bloco Cinza Principal (Trapézio) */}
+    <path d="M40 10H235V105H10L40 10Z" fill="#333333" />
+    
+    {/* Texto ALVS */}
+    <text x="45" y="88" fill="white" style={{ font: '900 85px Arial, sans-serif', letterSpacing: '-5px' }}>ALVS</text>
+    
+    {/* Quadrado Vermelho da Cruz */}
+    <rect x="240" y="10" width="105" height="105" fill="#FF3D3D" />
+    
+    {/* Cruz Branca */}
+    <path d="M252 50H275V25H295V50H318V75H295V100H275V75H252V50Z" fill="white" />
+    
+    {/* Linha de Pulso (EKG) */}
+    <path d="M252 62.5H268L275 40L285 85L292 62.5H318" stroke="#FF3D3D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path d="M252 62.5H268L275 40L285 85L292 62.5H318" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+    
+    {/* Texto Inferior */}
+    <text x="5" y="130" fill="#333333" style={{ font: '500 21px Arial, sans-serif', letterSpacing: '2.5px' }}>ENGINEERING & MEDICAL</text>
   </svg>
 );
 
@@ -227,9 +241,9 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-inter text-slate-900">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-32 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
-        <div className="mb-10 px-2">
-          <Logo className="w-24" />
+      <aside className="hidden md:flex w-36 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
+        <div className="mb-10 px-4 w-full">
+          <Logo className="w-full" />
         </div>
         
         <nav className="flex-1 flex flex-col gap-6">
@@ -239,7 +253,7 @@ export default function App() {
         </nav>
 
         <div className="mt-auto flex flex-col gap-6">
-          <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-slate-300 hover:text-red-500" />
+          <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-slate-300 hover:text-red-600" />
         </div>
       </aside>
 
@@ -247,7 +261,7 @@ export default function App() {
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 flex items-center justify-between z-30 shrink-0">
           <div className="flex items-center gap-3">
             <div className="md:hidden">
-              <Logo className="h-8" />
+              <Logo className="h-10" />
             </div>
             <h1 className="hidden sm:block text-sm md:text-lg font-black text-slate-800 tracking-tight uppercase truncate">
               {activeTab === 'dashboard' ? 'Status Engenharia' : activeTab === 'equipment' ? 'Ativos Hospitalares' : 'Unidades de Saúde'}
@@ -264,7 +278,7 @@ export default function App() {
               />
             </div>
             
-            <button onClick={syncData} className="p-2 text-slate-400 hover:text-blue-600 transition-all bg-slate-50 rounded-xl">
+            <button onClick={syncData} className="p-2 text-slate-400 hover:text-red-600 transition-all bg-slate-50 rounded-xl">
               <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
             </button>
 
@@ -275,8 +289,8 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 animate-pulse">
-               <RefreshCw size={48} className="animate-spin text-blue-500" />
-               <p className="font-black text-[10px] uppercase tracking-widest">Sincronizando Dados...</p>
+               <div className="w-12 h-12 border-4 border-slate-200 border-t-red-500 rounded-full animate-spin" />
+               <p className="font-black text-[10px] uppercase tracking-[0.2em]">ALVS: Sincronizando...</p>
             </div>
           ) : (
             <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -293,8 +307,8 @@ export default function App() {
                       onClick={() => generateGlobalReport(equipments, customers)}
                       className="w-full md:w-auto px-6 py-4 bg-white border border-slate-200 rounded-3xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 group"
                     >
-                      <Download size={18} className="text-red-600 group-hover:scale-110 transition-transform" /> 
-                      Gerar Relatório Completo
+                      <Download size={18} className="text-red-500 group-hover:scale-110 transition-transform" /> 
+                      Gerar Relatório ALVS
                     </button>
                   </div>
 
@@ -344,7 +358,7 @@ export default function App() {
 
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
-                        <History size={14} className="text-slate-800" /> Atividades Recentes
+                        <History size={14} className="text-red-500" /> Atividades Recentes
                       </h3>
                       <div className="space-y-4">
                         {stats.recentServices.length > 0 ? stats.recentServices.map((service) => (
@@ -377,8 +391,8 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800">Inventário Técnico</h3>
-                      <p className="text-xs text-slate-400 font-medium">Controle central de ativos — {filteredEquipments.length} itens</p>
+                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Inventário Técnico</h3>
+                      <p className="text-xs text-slate-400 font-medium tracking-wide">Controle central ALVS Engineering — {filteredEquipments.length} itens</p>
                     </div>
                     <button onClick={() => setIsEquipModalOpen(true)} className="w-full md:w-auto bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-100 active:scale-95">
                       <Plus size={20} /> Registrar Equipamento
@@ -402,7 +416,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 className="text-md font-black text-slate-800 group-hover:text-red-600 transition-colors truncate">{equip.name}</h4>
+                        <h4 className="text-md font-black text-slate-800 group-hover:text-red-500 transition-colors truncate">{equip.name}</h4>
                         <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-6 flex items-center gap-2">
                            <div className="w-1.5 h-1.5 bg-red-500 rounded-full" /> {equip.code}
                         </p>
@@ -416,7 +430,7 @@ export default function App() {
                           onClick={() => handleAiAdvice(equip)} 
                           className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg shadow-slate-100"
                         >
-                          <Sparkles size={12} /> Consultar IA
+                          <Sparkles size={12} /> Diagnóstico ALVS (IA)
                         </button>
                       </div>
                     ))}
@@ -428,8 +442,8 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800">Unidades de Saúde</h3>
-                      <p className="text-xs text-slate-400 font-medium">Gestão de clientes e unidades — {customers.length} unidades</p>
+                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Unidades de Saúde</h3>
+                      <p className="text-xs text-slate-400 font-medium tracking-wide">Gestão estratégica de clientes — {customers.length} unidades</p>
                     </div>
                     <button onClick={() => setIsCustomerModalOpen(true)} className="w-full md:w-auto bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-red-100 active:scale-95">
                       <Plus size={20} /> Nova Unidade
@@ -443,16 +457,16 @@ export default function App() {
                              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all shrink-0">
                                <Building2 size={24} />
                              </div>
-                             <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full uppercase tracking-tighter">Ativa</div>
+                             <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full uppercase tracking-tighter">Parceria Ativa</div>
                           </div>
                           <div className="min-w-0">
                             <p className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">{c.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{c.taxId}</p>
                           </div>
                           <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-red-400 shrink-0" /> {c.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-red-400 shrink-0" /> {c.phone}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-red-400 shrink-0" /> {c.address}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-red-500 shrink-0" /> {c.email}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-red-500 shrink-0" /> {c.phone}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-red-500 shrink-0" /> {c.address}</div>
                           </div>
                        </div>
                      ))}
@@ -470,9 +484,8 @@ export default function App() {
         <MobileNavItem icon={Users} label="Unidades" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
       </nav>
 
-      {/* Modals e Componentes de IA permanecem iguais com ajustes de cor para Vermelho/Cinza */}
       {isEquipModalOpen && (
-        <Modal title="Novo Ativo" onClose={() => setIsEquipModalOpen(false)}>
+        <Modal title="Novo Ativo Hospitalar" onClose={() => setIsEquipModalOpen(false)}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
             <FormInput label="Nome do Equipamento" name="name" placeholder="Ex: Monitor Multiparamétrico" required />
             <FormSelect label="Unidade de Saúde" name="customerId" options={customers.map(c => ({ value: c.id, label: c.name }))} />
@@ -482,7 +495,7 @@ export default function App() {
             </div>
             <FormInput label="Número de Série" name="serialNumber" placeholder="SN-XXXXXXXX" required />
             <FormTextArea label="Laudo de Entrada / Observações" name="observations" placeholder="Estado inicial..." />
-            <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-100 hover:bg-black transition-all">Registrar Equipamento</button>
+            <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-100 hover:bg-black transition-all">Salvar Registro ALVS</button>
           </form>
         </Modal>
       )}
@@ -497,13 +510,13 @@ export default function App() {
               <FormInput label="E-mail" name="email" type="email" placeholder="contato@exemplo.com" />
             </div>
             <FormTextArea label="Endereço Completo" name="address" placeholder="Rua, Número, Bairro, Cidade..." />
-            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Salvar Unidade</button>
+            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Registrar Unidade</button>
           </form>
         </Modal>
       )}
 
       {isServiceModalOpen && selectedEquipment && (
-        <Modal title="Ordem de Serviço" onClose={() => setIsServiceModalOpen(false)}>
+        <Modal title="Ordem de Serviço Técnica" onClose={() => setIsServiceModalOpen(false)}>
           <div className="bg-red-50 p-6 rounded-[24px] mb-8 border border-red-100">
             <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Equipamento em Atendimento</p>
             <p className="text-sm font-bold text-slate-800">{selectedEquipment.name} — <span className="font-mono text-red-600">{selectedEquipment.code}</span></p>
@@ -515,7 +528,7 @@ export default function App() {
               { value: EquipmentStatus.IN_PROGRESS, label: 'Em Manutenção' },
               { value: EquipmentStatus.COMPLETED, label: 'Liberado / Concluído' },
             ]} />
-            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Salvar Intervenção</button>
+            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-100 hover:bg-red-700 transition-all">Finalizar Intervenção</button>
           </form>
         </Modal>
       )}
@@ -526,7 +539,7 @@ export default function App() {
              <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
              <div className="flex items-center gap-3 mb-4 text-red-600">
                <div className="bg-red-50 p-2 rounded-xl"><Sparkles size={20} /></div>
-               <span className="font-black text-[10px] uppercase tracking-widest">Diagnóstico IA</span>
+               <span className="font-black text-[10px] uppercase tracking-widest">Suporte IA ALVS</span>
                <button onClick={() => setAiAdvice(null)} className="ml-auto text-slate-300 hover:text-red-500 transition-colors"><X size={20} /></button>
              </div>
              <p className="text-xs text-slate-700 leading-relaxed font-medium italic">"{aiAdvice}"</p>
@@ -538,7 +551,7 @@ export default function App() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
            <div className="bg-white p-12 rounded-[48px] shadow-2xl flex flex-col items-center">
               <div className="w-12 h-12 border-[5px] border-red-100 border-t-red-600 rounded-full animate-spin"></div>
-              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">IA Processando...</p>
+              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">IA Analisando Ativo...</p>
            </div>
         </div>
       )}

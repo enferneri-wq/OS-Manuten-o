@@ -6,12 +6,11 @@ import {
   CheckCircle2, AlertCircle, Building2, 
   HardDrive, BarChart3, PieChart as PieChartIcon,
   LogOut, X, History, ArrowRight,
-  Sparkles, RefreshCw, Database, MapPin, Phone, Mail,
-  Menu
+  Sparkles, RefreshCw, MapPin, Phone, Mail
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
-  Tooltip
+  Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import { 
   Equipment, Customer, EquipmentStatus, 
@@ -82,24 +81,38 @@ export default function App() {
   }, [equipments, customers]);
 
   const stats = useMemo(() => {
+    // Dados para o Gráfico de Rosca (Status)
     const statusCounts = equipments.reduce((acc: any, curr) => {
       acc[curr.status] = (acc[curr.status] || 0) + 1;
       return acc;
     }, {});
     
-    const pieData = [
+    const statusData = [
       { name: 'Pendente', value: statusCounts[EquipmentStatus.PENDING] || 0, color: '#F59E0B' },
       { name: 'Em Manutenção', value: statusCounts[EquipmentStatus.IN_PROGRESS] || 0, color: '#3B82F6' },
       { name: 'Concluído', value: statusCounts[EquipmentStatus.COMPLETED] || 0, color: '#10B981' },
-    ];
+    ].filter(d => d.value > 0);
+
+    // Dados para o Gráfico de Barras (Ativos por Cliente)
+    const customerCounts = equipments.reduce((acc: any, curr) => {
+      const customer = customers.find(c => c.id === curr.customerId);
+      const name = customer ? customer.name : 'Outros';
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {});
+
+    const barData = Object.keys(customerCounts).map(name => ({
+      name,
+      total: customerCounts[name]
+    })).sort((a, b) => b.total - a.total).slice(0, 5);
 
     const recentServices = equipments
       .flatMap(e => (e.serviceRecords || []).map(s => ({ ...s, equipName: e.name, equipCode: e.code })))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
 
-    return { pieData, recentServices };
-  }, [equipments]);
+    return { statusData, barData, recentServices };
+  }, [equipments, customers]);
 
   const handleAddEquipment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -241,7 +254,7 @@ export default function App() {
               <Stethoscope size={20} />
             </div>
             <h1 className="text-sm md:text-xl font-black text-slate-800 tracking-tight uppercase truncate">
-              {activeTab === 'dashboard' ? 'Status' : activeTab === 'equipment' ? 'Ativos' : 'Unidades'}
+              {activeTab === 'dashboard' ? 'Status de Engenharia' : activeTab === 'equipment' ? 'Ativos' : 'Unidades'}
             </h1>
           </div>
 
@@ -271,7 +284,7 @@ export default function App() {
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 animate-pulse">
                <RefreshCw size={48} className="animate-spin text-blue-500" />
-               <p className="font-black text-[10px] uppercase tracking-widest">Aguarde...</p>
+               <p className="font-black text-[10px] uppercase tracking-widest">Sincronizando...</p>
             </div>
           ) : (
             <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -284,25 +297,53 @@ export default function App() {
                     <StatCard label="Concluídos" value={equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length} icon={CheckCircle2} color="emerald" />
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
-                      <h3 className="w-full text-left font-black text-slate-400 text-[10px] uppercase tracking-widest mb-8 flex items-center gap-2">
-                        <PieChartIcon size={14} className="text-blue-500" /> Saúde da Frota
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Gráfico de Status (Donut) */}
+                    <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
+                      <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <PieChartIcon size={14} className="text-blue-500" /> Status Operacional
                       </h3>
                       <div className="w-full h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie data={stats.pieData} innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
-                              {stats.pieData.map((entry: any, index: number) => (
+                            <Pie data={stats.statusData} innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
+                              {stats.statusData.map((entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                               ))}
                             </Pie>
-                            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: 'bold' }} />
                           </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-4">
+                         {stats.statusData.map((entry: any) => (
+                           <div key={entry.name} className="flex flex-col items-center">
+                              <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: entry.color }}></div>
+                              <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter text-center">{entry.name}</span>
+                              <span className="text-xs font-bold text-slate-800">{entry.value}</span>
+                           </div>
+                         ))}
+                      </div>
+                    </div>
+
+                    {/* Gráfico de Barras (Ativos por Unidade) */}
+                    <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
+                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <BarChart3 size={14} className="text-indigo-500" /> Ativos por Unidade
+                      </h3>
+                      <div className="w-full h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={stats.barData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                            <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                            <Bar dataKey="total" fill="#3B82F6" radius={[0, 8, 8, 0]} barSize={20} />
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
 
+                    {/* Histórico Recente (Ajustado para o grid) */}
                     <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
                         <History size={14} className="text-indigo-500" /> Atividades Recentes

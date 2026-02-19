@@ -6,7 +6,8 @@ import {
   CheckCircle2, AlertCircle, Building2, 
   HardDrive, BarChart3, PieChart as PieChartIcon,
   LogOut, X, History, ArrowRight,
-  Sparkles, RefreshCw, Database, MapPin, Phone, Mail
+  Sparkles, RefreshCw, Database, MapPin, Phone, Mail,
+  Menu
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
@@ -35,7 +36,6 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isLocalMode, setIsLocalMode] = useState(false);
 
   const [isEquipModalOpen, setIsEquipModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -49,22 +49,17 @@ export default function App() {
     const savedCust = localStorage.getItem(STORAGE_KEY_CUST);
     if (savedEquip) setEquipments(JSON.parse(savedEquip));
     if (savedCust) setCustomers(JSON.parse(savedCust));
-    setIsLocalMode(true);
   };
 
   const syncData = async () => {
     setLoading(true);
     try {
-      // Tenta buscar equipamentos
       const resEquip = await fetch(`${API_URL}?action=get_all`);
       if (resEquip.ok) {
         const data = await resEquip.json();
         if (Array.isArray(data)) setEquipments(data);
-      } else {
-        setIsLocalMode(true);
       }
 
-      // Tenta buscar clientes
       const resCust = await fetch(`${API_URL}?action=get_customers`);
       if (resCust.ok) {
         const data = await resCust.json();
@@ -215,7 +210,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-inter text-slate-900">
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-28 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
         <div className="mb-10 text-center">
           <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-200 inline-block mb-3">
@@ -235,39 +230,44 @@ export default function App() {
         </nav>
 
         <div className="mt-auto flex flex-col gap-6">
-          <button 
-            onClick={syncData} 
-            title="Sincronizar"
-            className="p-3 text-slate-300 hover:text-blue-600 transition-all hover:scale-110"
-          >
-            <RefreshCw size={24} className={loading ? 'animate-spin' : ''} />
-          </button>
           <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-slate-300 hover:text-red-500" />
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 flex items-center justify-between z-30">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-black text-slate-800 tracking-tight uppercase">
-              {activeTab === 'dashboard' ? 'Status de Engenharia' : activeTab === 'equipment' ? 'Inventário de Ativos' : 'Unidades de Saúde'}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-20 md:pb-0">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 flex items-center justify-between z-30 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="md:hidden bg-blue-600 p-2 rounded-xl text-white">
+              <Stethoscope size={20} />
+            </div>
+            <h1 className="text-sm md:text-xl font-black text-slate-800 tracking-tight uppercase truncate">
+              {activeTab === 'dashboard' ? 'Status' : activeTab === 'equipment' ? 'Ativos' : 'Unidades'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="relative hidden lg:block">
+          <div className="flex items-center gap-3 md:gap-6">
+            <div className="relative hidden sm:block lg:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" placeholder="Buscar..." 
-                className="w-48 pl-11 pr-4 py-2 bg-slate-100 rounded-xl text-xs border-transparent focus:bg-white outline-none transition-all shadow-inner"
+                className="w-32 md:w-48 pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-xs border-transparent focus:bg-white outline-none transition-all shadow-inner"
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg border-2 border-white" title="Administrador">AV</div>
+            
+            <button 
+              onClick={syncData} 
+              title="Sincronizar"
+              className="p-2 text-slate-400 hover:text-blue-600 transition-all bg-slate-50 rounded-xl"
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
+
+            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg border-2 border-white shrink-0" title="Administrador">AV</div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 animate-pulse">
                <RefreshCw size={48} className="animate-spin text-blue-500" />
@@ -277,7 +277,7 @@ export default function App() {
             <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
               {activeTab === 'dashboard' && (
                 <div className="space-y-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     <StatCard label="Total Ativos" value={equipments.length} icon={HardDrive} color="blue" />
                     <StatCard label="Pendentes" value={equipments.filter(e => e.status === EquipmentStatus.PENDING).length} icon={AlertCircle} color="amber" />
                     <StatCard label="Em Reparo" value={equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length} icon={Wrench} color="indigo" />
@@ -285,7 +285,7 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
+                    <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
                       <h3 className="w-full text-left font-black text-slate-400 text-[10px] uppercase tracking-widest mb-8 flex items-center gap-2">
                         <PieChartIcon size={14} className="text-blue-500" /> Saúde da Frota
                       </h3>
@@ -303,23 +303,23 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
+                    <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm lg:col-span-2">
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
                         <History size={14} className="text-indigo-500" /> Atividades Recentes
                       </h3>
                       <div className="space-y-4">
                         {stats.recentServices.length > 0 ? stats.recentServices.map((service) => (
                           <div key={service.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all">
-                            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                               <Wrench size={18} />
                             </div>
-                            <div className="flex-1">
-                              <p className="text-xs font-bold text-slate-800">{service.equipName}</p>
-                              <p className="text-[10px] text-slate-500 font-mono">{service.equipCode}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate">{service.equipName}</p>
+                              <p className="text-[10px] text-slate-500 font-mono truncate">{service.equipCode}</p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                               <p className="text-[10px] font-black text-slate-400 uppercase">{formatDate(service.date).split(',')[0]}</p>
-                              <p className="text-[11px] text-slate-600 truncate max-w-[150px] font-medium italic">"{service.description}"</p>
+                              <p className="text-[11px] text-slate-600 truncate max-w-[100px] md:max-w-[150px] font-medium italic">"{service.description}"</p>
                             </div>
                           </div>
                         )) : (
@@ -336,17 +336,17 @@ export default function App() {
 
               {activeTab === 'equipment' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-800">Inventário de Ativos</h3>
-                      <p className="text-xs text-slate-400 font-medium">Controle central de equipamentos — {filteredEquipments.length} itens</p>
+                      <p className="text-xs text-slate-400 font-medium">Controle central — {filteredEquipments.length} itens</p>
                     </div>
-                    <button onClick={() => setIsEquipModalOpen(true)} className="bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
+                    <button onClick={() => setIsEquipModalOpen(true)} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
                       <Plus size={20} /> Registrar Novo
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredEquipments.map(equip => (
                       <div key={equip.id} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col">
                         <div className="flex justify-between items-start mb-6">
@@ -363,14 +363,14 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 className="text-md font-black text-slate-800 group-hover:text-blue-600 transition-colors">{equip.name}</h4>
+                        <h4 className="text-md font-black text-slate-800 group-hover:text-blue-600 transition-colors truncate">{equip.name}</h4>
                         <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-6 flex items-center gap-2">
                            <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" /> {equip.code}
                         </p>
                         
                         <div className="space-y-2 text-[11px] text-slate-600 bg-slate-50/50 p-4 rounded-xl mb-6 border border-slate-100/50">
-                          <div className="flex items-center gap-2 font-semibold"><Building2 size={12} className="text-blue-400" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
-                          <div className="flex items-center gap-2 font-semibold"><HardDrive size={12} className="text-indigo-400" /> {equip.brand} {equip.model}</div>
+                          <div className="flex items-center gap-2 font-semibold truncate"><Building2 size={12} className="text-blue-400 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
+                          <div className="flex items-center gap-2 font-semibold truncate"><HardDrive size={12} className="text-indigo-400 shrink-0" /> {equip.brand} {equip.model}</div>
                         </div>
 
                         <button 
@@ -387,35 +387,35 @@ export default function App() {
 
               {activeTab === 'customers' && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-800">Unidades de Saúde</h3>
-                      <p className="text-xs text-slate-400 font-medium">Gestão de clientes e locais de atendimento — {customers.length} unidades</p>
+                      <p className="text-xs text-slate-400 font-medium">Gestão de clientes — {customers.length} unidades</p>
                     </div>
-                    <button onClick={() => setIsCustomerModalOpen(true)} className="bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
+                    <button onClick={() => setIsCustomerModalOpen(true)} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95">
                       <Plus size={20} /> Adicionar Unidade
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                      {customers.map(c => (
-                       <div key={c.id} className="p-8 bg-white rounded-[32px] border border-slate-100 text-left hover:shadow-2xl transition-all group flex flex-col gap-6">
+                       <div key={c.id} className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 text-left hover:shadow-2xl transition-all group flex flex-col gap-6">
                           <div className="flex justify-between items-start">
-                             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
                                <Building2 size={24} />
                              </div>
                              <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black rounded-full uppercase tracking-tighter">
-                               Contrato Ativo
+                               Ativo
                              </div>
                           </div>
-                          <div>
-                            <p className="text-lg font-black text-slate-800 uppercase tracking-tight">{c.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold font-mono mt-1">{c.taxId}</p>
+                          <div className="min-w-0">
+                            <p className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">{c.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{c.taxId}</p>
                           </div>
                           <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600"><Mail size={14} className="text-blue-400" /> {c.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600"><Phone size={14} className="text-blue-400" /> {c.phone}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600"><MapPin size={14} className="text-blue-400" /> {c.address}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-blue-400 shrink-0" /> {c.email}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-blue-400 shrink-0" /> {c.phone}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-blue-400 shrink-0" /> {c.address}</div>
                           </div>
                        </div>
                      ))}
@@ -427,7 +427,14 @@ export default function App() {
         </main>
       </div>
 
-      {/* Modais */}
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around h-20 px-4 z-50 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)]">
+        <MobileNavItem icon={LayoutDashboard} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+        <MobileNavItem icon={Wrench} label="Ativos" active={activeTab === 'equipment'} onClick={() => setActiveTab('equipment')} />
+        <MobileNavItem icon={Users} label="Unidades" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+      </nav>
+
+      {/* Modals */}
       {isEquipModalOpen && (
         <Modal title="Novo Ativo" onClose={() => setIsEquipModalOpen(false)}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
@@ -478,12 +485,12 @@ export default function App() {
       )}
 
       {aiAdvice && (
-        <div className="fixed bottom-10 right-10 z-[100] max-w-sm animate-in slide-in-from-right duration-500">
-          <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-indigo-100 relative overflow-hidden">
+        <div className="fixed bottom-24 md:bottom-10 right-4 md:right-10 z-[100] max-w-sm animate-in slide-in-from-right duration-500">
+          <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-2xl border border-indigo-100 relative overflow-hidden">
              <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600"></div>
              <div className="flex items-center gap-3 mb-4 text-indigo-600">
                <div className="bg-indigo-50 p-2 rounded-xl"><Sparkles size={20} /></div>
-               <span className="font-black text-[10px] uppercase tracking-widest">Conselho Gemini IA</span>
+               <span className="font-black text-[10px] uppercase tracking-widest">IA Gemini</span>
                <button onClick={() => setAiAdvice(null)} className="ml-auto text-slate-300 hover:text-red-500 transition-colors"><X size={20} /></button>
              </div>
              <p className="text-xs text-slate-700 leading-relaxed font-medium italic">"{aiAdvice}"</p>
@@ -495,7 +502,7 @@ export default function App() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
            <div className="bg-white p-12 rounded-[48px] shadow-2xl flex flex-col items-center">
               <div className="w-12 h-12 border-[5px] border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse">Consultando IA...</p>
+              <p className="mt-8 font-black text-slate-800 text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">Consultando IA...</p>
            </div>
         </div>
       )}
@@ -518,6 +525,19 @@ function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) 
   );
 }
 
+function MobileNavItem({ icon: Icon, label, active, onClick }: any) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-1 w-20 transition-all ${active ? 'text-blue-600 scale-110' : 'text-slate-300'}`}
+    >
+      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+      <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+      {active && <div className="w-1 h-1 bg-blue-600 rounded-full mt-0.5" />}
+    </button>
+  );
+}
+
 function StatCard({ label, value, icon: Icon, color }: any) {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
@@ -526,13 +546,13 @@ function StatCard({ label, value, icon: Icon, color }: any) {
     emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
   };
   return (
-    <div className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-transform group-hover:scale-110 ${colorMap[color]}`}>
-        <Icon size={22} strokeWidth={2.5} />
+    <div className="bg-white p-5 md:p-6 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-3 md:gap-4 group hover:shadow-xl transition-all">
+      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center border transition-transform group-hover:scale-110 ${colorMap[color]}`}>
+        <Icon size={20} strokeWidth={2.5} />
       </div>
       <div>
         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-black text-slate-800 tracking-tighter">{value}</p>
+        <p className="text-2xl md:text-3xl font-black text-slate-800 tracking-tighter">{value}</p>
       </div>
     </div>
   );
@@ -540,13 +560,13 @@ function StatCard({ label, value, icon: Icon, color }: any) {
 
 function Modal({ title, children, onClose }: any) {
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-      <div className="bg-white rounded-[40px] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-4">
+      <div className="bg-white rounded-t-[40px] md:rounded-[40px] w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:zoom-in-95 duration-200">
+        <div className="px-6 md:px-10 py-6 md:py-8 border-b border-slate-50 flex items-center justify-between">
           <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{title}</h3>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-red-500 bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
         </div>
-        <div className="p-10 max-h-[75vh] overflow-y-auto custom-scrollbar">{children}</div>
+        <div className="p-6 md:p-10 max-h-[75vh] md:max-h-[75vh] overflow-y-auto custom-scrollbar">{children}</div>
       </div>
     </div>
   );

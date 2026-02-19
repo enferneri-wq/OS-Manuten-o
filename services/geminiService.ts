@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 export const getMaintenanceAdvice = async (
@@ -7,28 +6,29 @@ export const getMaintenanceAdvice = async (
   model: string,
   issue: string
 ): Promise<string> => {
-  // Fix: Use the required named parameter and direct process.env.API_KEY access for initialization
+  // Inicialização correta conforme as diretrizes do SDK
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
   try {
-    // Fix: Selected 'gemini-3-pro-preview' for advanced reasoning/STEM diagnostic tasks
+    // Uso do modelo Gemini 3 Pro para tarefas complexas de raciocínio técnico
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: `Como um engenheiro clínico sênior, sugira passos técnicos de diagnóstico para o seguinte equipamento médico:
+      contents: `Como um engenheiro clínico especializado, forneça um guia rápido de diagnóstico técnico para o seguinte caso:
         Equipamento: ${equipmentName}
-        Marca: ${brand}
-        Modelo: ${model}
-        Problema Relatado: ${issue}
+        Marca/Modelo: ${brand} ${model}
+        Problema: ${issue}
         
-        Responda em português brasileiro de forma técnica e resumida (máximo 150 palavras).`,
+        Sua resposta deve ser estritamente técnica, em português brasileiro e concisa (máximo 120 palavras).`,
       config: {
-        temperature: 0.7,
-        topP: 0.9,
+        temperature: 0.4, // Menor temperatura para respostas mais factuais e técnicas
+        topP: 0.8,
       },
     });
-    // Fix: Accessing the generated text via the .text property as per the latest SDK requirements
-    return response.text || "Não foi possível gerar sugestões automáticas no momento.";
+
+    // Acesso correto à propriedade .text da resposta
+    return response.text || "Não foi possível processar a recomendação técnica no momento.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Erro ao conectar com a IA para sugestões técnicas.";
+    console.error("Erro na integração com Gemini API:", error);
+    return "Falha ao conectar com o motor de IA para suporte técnico.";
   }
 };

@@ -41,7 +41,6 @@ export default function App() {
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
-  // Busca dados persistentes do MySQL da Hostinger
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -159,24 +158,34 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-inter">
-      <aside className="hidden md:flex w-24 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
-        <div className="mb-12">
-          <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+      {/* Sidebar - Agora com nome do sistema e tooltips */}
+      <aside className="hidden md:flex w-28 bg-white border-r border-slate-200 flex-col items-center py-8 z-50">
+        <div className="mb-10 text-center">
+          <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-200 inline-block mb-3">
             <Stethoscope size={28} strokeWidth={2.5} />
+          </div>
+          <div className="px-2">
+            <h2 className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-tight">
+              ALVS<br/>Engineering
+            </h2>
           </div>
         </div>
         
         <nav className="flex-1 flex flex-col gap-6">
-          <SidebarIcon icon={LayoutDashboard} label="Painel" id="dashboard" activeTab={activeTab} onClick={setActiveTab} />
-          <SidebarIcon icon={Wrench} label="Ativos" id="equipment" activeTab={activeTab} onClick={setActiveTab} />
-          <SidebarIcon icon={Users} label="Clientes" id="customers" activeTab={activeTab} onClick={setActiveTab} />
+          <SidebarIcon icon={LayoutDashboard} label="Painel de Controle" id="dashboard" activeTab={activeTab} onClick={setActiveTab} />
+          <SidebarIcon icon={Wrench} label="Inventário de Ativos" id="equipment" activeTab={activeTab} onClick={setActiveTab} />
+          <SidebarIcon icon={Users} label="Gestão de Clientes" id="customers" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
 
         <div className="mt-auto flex flex-col gap-6">
-          <button onClick={fetchData} className="p-3 text-slate-300 hover:text-blue-600 transition-colors">
+          <button 
+            onClick={fetchData} 
+            title="Sincronizar Banco de Dados"
+            className="p-3 text-slate-300 hover:text-blue-600 transition-colors"
+          >
             <RefreshCw size={24} className={loading ? 'animate-spin' : ''} />
           </button>
-          <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-slate-300 hover:text-red-500" />
+          <SidebarIcon icon={LogOut} label="Sair do Sistema" id="logout" activeTab="" onClick={() => {}} color="text-slate-300 hover:text-red-500" />
         </div>
       </aside>
 
@@ -201,7 +210,7 @@ export default function App() {
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-md">AV</div>
+            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-md cursor-help" title="Usuário: Administrador ALVS">AV</div>
           </div>
         </header>
 
@@ -230,7 +239,6 @@ export default function App() {
                       <div className="w-full h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            {/* Fix: stats.pieData used instead of undefined pieData */}
                             <Pie data={stats.pieData} innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
                               {stats.pieData.map((entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -293,10 +301,18 @@ export default function App() {
                             {equip.status}
                           </span>
                           <div className="flex gap-2">
-                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                            <button 
+                              onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} 
+                              title="Abrir Ordem de Manutenção"
+                              className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                            >
                               <Wrench size={16} />
                             </button>
-                            <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '')} className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm">
+                            <button 
+                              onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '')} 
+                              title="Gerar Relatório PDF"
+                              className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm"
+                            >
                               <FileText size={16} />
                             </button>
                           </div>
@@ -312,7 +328,11 @@ export default function App() {
                           <div className="flex items-center gap-2 font-semibold"><HardDrive size={12} className="text-indigo-400" /> {equip.brand} {equip.model}</div>
                         </div>
 
-                        <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100">
+                        <button 
+                          onClick={() => handleAiAdvice(equip)} 
+                          title="Análise Técnica Preditiva via Gemini Pro"
+                          className="mt-auto w-full py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
+                        >
                           <Sparkles size={12} /> Diagnóstico IA
                         </button>
                       </div>
@@ -409,7 +429,11 @@ export default function App() {
 function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) {
   const active = activeTab === id;
   return (
-    <button onClick={() => onClick(id)} className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : color || 'text-slate-300 hover:bg-slate-50 hover:text-blue-600'}`}>
+    <button 
+      onClick={() => onClick(id)} 
+      title={label}
+      className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : color || 'text-slate-300 hover:bg-slate-50 hover:text-blue-600'}`}
+    >
       <Icon size={24} strokeWidth={active ? 2.5 : 2} />
     </button>
   );

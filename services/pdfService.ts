@@ -8,46 +8,67 @@ const BRAND_RED: [number, number, number] = [255, 61, 61];
 const DARK_GREY: [number, number, number] = [51, 51, 51];
 const LIGHT_GREY: [number, number, number] = [245, 245, 245];
 
+/**
+ * Desenha o cabeçalho técnico padronizado ALVS com título centralizado
+ */
 const drawHeader = (doc: jsPDF, title: string, cnpj: string) => {
   const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Faixa superior cinza escura
   doc.setFillColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.rect(0, 0, pageWidth, 35, 'F');
+  
+  // Bloco decorativo vermelho na direita
   doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
-  doc.rect(pageWidth - 70, 0, 70, 35, 'F');
+  doc.rect(pageWidth - 60, 0, 60, 35, 'F');
 
+  // Desenho da Logo ALVS (Lado Esquerdo)
   const x = 15;
   const y = 5;
-  const s = 0.9;
+  const s = 0.8;
+  
+  // Triângulo Vermelho Logo
   doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
   doc.triangle(x + 1*s, y + 2*s, x + 7*s, y + 2*s, x + 1*s, y + 21*s, 'F');
+  
+  // Trapézio Branco Logo
   doc.setFillColor(255, 255, 255);
   doc.triangle(x + 8*s, y + 2*s, x + 47*s, y + 2*s, x + 47*s, y + 21*s, 'F');
   doc.triangle(x + 8*s, y + 2*s, x + 47*s, y + 21*s, x + 2*s, y + 21*s, 'F');
+  
+  // Texto ALVS
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(38 * s);
   doc.text("ALVS", x + 9 * s, y + 17.5 * s);
 
-  const cx = pageWidth - 45;
-  const cy = 7;
+  // Cruz Médica no Bloco Vermelho
+  const cx = pageWidth - 39;
+  const cy = 8;
   doc.setFillColor(255, 255, 255);
   doc.rect(cx, cy, 18, 18, 'F');
   doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
   doc.rect(cx + 3, cy + 7.5, 12, 3, 'F');
   doc.rect(cx + 7.5, cy + 3, 3, 12, 'F');
 
+  // TÍTULO DO RELATÓRIO (CENTRALIZADO)
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.text(title, pageWidth - 15, 20, { align: "right" });
-  doc.setFontSize(8);
-  doc.text(`CNPJ: ${cnpj}`, 15, 30);
-  doc.text("ENGINEERING & MEDICAL", 15, 26);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text(title.toUpperCase(), pageWidth / 2, 18, { align: "center" });
+
+  // Informações Complementares (CNPJ e Slogan)
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text("ENGINEERING & MEDICAL", pageWidth / 2, 24, { align: "center" });
+  doc.text(`CNPJ: ${cnpj}`, pageWidth / 2, 28, { align: "center" });
 };
 
 export const generateEquipmentReport = (equipment: Equipment, customerName: string, cnpj: string) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "LAUDO TÉCNICO DE ATIVO", cnpj);
+  drawHeader(doc, "Laudo Técnico de Ativo", cnpj);
+  
   doc.setFontSize(11);
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.setFont("helvetica", "bold");
@@ -96,7 +117,8 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
 export const generateServiceOrderReport = (service: ServiceRecord, equipment: Equipment, cnpj: string) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "ORDEM DE SERVIÇO (OS)", cnpj);
+  drawHeader(doc, "Ordem de Serviço (OS)", cnpj);
+  
   doc.setFontSize(10);
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.setFont("helvetica", "bold");
@@ -137,7 +159,7 @@ export const generateServiceOrderReport = (service: ServiceRecord, equipment: Eq
 export const generateGlobalReport = (equipments: Equipment[], customers: Customer[], cnpj: string) => {
   const doc = new jsPDF({ orientation: 'landscape' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "RELATÓRIO GERENCIAL DE FROTA", cnpj);
+  drawHeader(doc, "Relatório Gerencial de Frota", cnpj);
 
   const total = equipments.length;
   const inMaint = equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length;
@@ -171,7 +193,7 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
 
 export const generateCustomerListReport = (customers: Customer[], cnpj: string) => {
   const doc = new jsPDF();
-  drawHeader(doc, "RELATÓRIO DE UNIDADES DE SAÚDE", cnpj);
+  drawHeader(doc, "Relatório de Unidades de Saúde", cnpj);
   
   const tableData = customers.map(c => [
     c.name.toUpperCase(), c.taxId, c.email, c.phone
@@ -191,7 +213,7 @@ export const generateCustomerListReport = (customers: Customer[], cnpj: string) 
 
 export const generateSupplierListReport = (suppliers: Supplier[], cnpj: string) => {
   const doc = new jsPDF();
-  drawHeader(doc, "RELATÓRIO DE FORNECEDORES", cnpj);
+  drawHeader(doc, "Relatório de Fornecedores", cnpj);
   
   const tableData = suppliers.map(s => [
     s.name.toUpperCase(), s.taxId, s.contactName, s.phone

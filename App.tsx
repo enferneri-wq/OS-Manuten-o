@@ -361,11 +361,12 @@ export default function App() {
               {activeTab === 'dashboard' && (
                 <div className="space-y-8">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 flex-1">
                       <StatCard label="Total Ativos" value={equipments.length} icon={HardDrive} color="blue" />
-                      <StatCard label="Aguardando" value={equipments.filter(e => e.status === EquipmentStatus.PENDING).length} icon={AlertCircle} color="amber" />
                       <StatCard label="Manutenção" value={equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length} icon={Wrench} color="indigo" />
                       <StatCard label="Concluídos" value={equipments.filter(e => e.status === EquipmentStatus.COMPLETED).length} icon={CheckCircle2} color="emerald" />
+                      <StatCard label="Prontos" value={equipments.filter(e => e.status === EquipmentStatus.READY).length} icon={History} color="amber" />
+                      <StatCard label="Entregues" value={equipments.filter(e => e.status === EquipmentStatus.DELIVERED).length} icon={Users} color="blue" />
                     </div>
                     <button 
                       onClick={() => generateGlobalReport(equipments, customers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
@@ -680,7 +681,9 @@ export default function App() {
             <FormSelect label="Status Final" name="status" defaultValue={selectedEquipment.status} options={[
               { value: EquipmentStatus.PENDING, label: 'Aguardando Peças' },
               { value: EquipmentStatus.IN_PROGRESS, label: 'Em Manutenção' },
-              { value: EquipmentStatus.COMPLETED, label: 'Liberado para Uso' },
+              { value: EquipmentStatus.COMPLETED, label: 'Serviço Concluído' },
+              { value: EquipmentStatus.READY, label: 'Aguardando Retirada' },
+              { value: EquipmentStatus.DELIVERED, label: 'Entregue ao Cliente' },
             ]} />
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Salvar Manutenção</button>
           </form>
@@ -802,8 +805,10 @@ function FormTextArea({ label, ...props }: any) {
 function getStatusBadge(status: EquipmentStatus) {
   switch (status) {
     case EquipmentStatus.PENDING: return 'bg-amber-50 text-amber-600 border-amber-100';
-    case EquipmentStatus.IN_PROGRESS: return 'bg-red-50 text-red-600 border-red-100';
+    case EquipmentStatus.IN_PROGRESS: return 'bg-blue-50 text-blue-600 border-blue-100';
     case EquipmentStatus.COMPLETED: return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+    case EquipmentStatus.READY: return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+    case EquipmentStatus.DELIVERED: return 'bg-slate-100 text-slate-600 border-slate-200';
     default: return 'bg-slate-50 text-slate-700 border-slate-100';
   }
 }

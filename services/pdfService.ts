@@ -168,12 +168,13 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
 
   const total = equipments.length;
   const inMaint = equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length;
-  const pending = equipments.filter(e => e.status === EquipmentStatus.PENDING).length;
+  const ready = equipments.filter(e => e.status === EquipmentStatus.READY).length;
+  const delivered = equipments.filter(e => e.status === EquipmentStatus.DELIVERED).length;
 
   autoTable(doc, {
     startY: 40,
-    head: [["TOTAL ATIVOS", "EM MANUTENÇÃO", "AGUARDANDO PEÇAS"]],
-    body: [[total, inMaint, pending]],
+    head: [["TOTAL ATIVOS", "EM MANUTENÇÃO", "PRONTOS", "ENTREGUES"]],
+    body: [[total, inMaint, ready, delivered]],
     theme: 'grid',
     headStyles: { fillColor: DARK_GREY, halign: 'center' },
     bodyStyles: { halign: 'center', fontSize: 14, fontStyle: 'bold' }

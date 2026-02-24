@@ -3,6 +3,8 @@ export enum EquipmentStatus {
   PENDING = 'Aguardando Serviço',
   IN_PROGRESS = 'Em Manutenção',
   COMPLETED = 'Concluído',
+  READY = 'Aguardando Retirada',
+  DELIVERED = 'Entregue',
   CANCELLED = 'Cancelado'
 }
 

@@ -141,7 +141,7 @@ export default function App() {
 
   const stats = useMemo(() => {
     const recentServices = equipments
-      .flatMap(e => (e.serviceRecords || []).map(s => ({ ...s, equipName: e.name, equipCode: e.code, serviceType: s.serviceType })))
+      .flatMap(e => (e.serviceRecords || []).map(s => ({ ...s, equipName: e.name, equipCode: e.code, serviceType: s.serviceType, isResolved: s.isResolved })))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
 
@@ -246,6 +246,7 @@ export default function App() {
       contactName: fd.get('contactName') as string,
       email: fd.get('email') as string,
       phone: fd.get('phone') as string,
+      equipmentId: fd.get('equipmentId') as string || undefined,
     };
     setSuppliers([newSupp, ...suppliers]);
     setIsSupplierModalOpen(false);
@@ -262,7 +263,9 @@ export default function App() {
       date: new Date().toISOString(), 
       description: fd.get('description') as string, 
       serviceType: fd.get('serviceType') as string,
-      technicianId: 'u1'
+      technicianId: 'u1',
+      isResolved: fd.get('isResolved') === 'on',
+      resolution: fd.get('resolution') as string,
     };
     const updated = equipments.map(eq => {
       if (eq.id === selectedEquipment.id) {
@@ -389,7 +392,14 @@ export default function App() {
                           </div>
                           <div className="hidden lg:block flex-1 text-center italic text-slate-400 text-[11px] truncate px-4">"{service.description}"</div>
                           <div className="text-right flex items-center gap-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">{formatDate(service.date)}</p>
+                            <div className="flex flex-col items-end">
+                              <p className="text-[10px] font-black text-slate-400 uppercase">{formatDate(service.date)}</p>
+                              {(service as any).isResolved ? (
+                                <span className="text-[8px] font-black text-emerald-500 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> Resolvido</span>
+                              ) : (
+                                <span className="text-[8px] font-black text-amber-500 uppercase flex items-center gap-1"><AlertCircle size={10} /> Pendente</span>
+                              )}
+                            </div>
                             <button 
                               onClick={() => generateServiceOrderReport(service as any, equipments.find(e => e.id === service.equipmentId)!, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
                               className="p-2 bg-white text-slate-400 hover:text-blue-600 rounded-lg shadow-sm border border-slate-100 transition-all opacity-0 group-hover:opacity-100"
@@ -524,9 +534,15 @@ export default function App() {
                             <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{s.taxId}</p>
                           </div>
                           <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Users size={14} className="text-red-500 shrink-0" /> {s.contactName}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-red-500 shrink-0" /> {s.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-red-500 shrink-0" /> {s.phone}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Users size={14} className="text-blue-500 shrink-0" /> {s.contactName}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-blue-500 shrink-0" /> {s.email}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-blue-500 shrink-0" /> {s.phone}</div>
+                             {s.equipmentId && (
+                               <div className="flex items-center gap-3 text-xs text-blue-600 font-bold truncate">
+                                 <HardDrive size={14} className="shrink-0" /> 
+                                 {equipments.find(e => e.id === s.equipmentId)?.name || 'Equipamento não encontrado'}
+                               </div>
+                             )}
                           </div>
                        </div>
                      ))}
@@ -636,6 +652,7 @@ export default function App() {
           <form onSubmit={handleAddSupplier} className="space-y-6">
             <FormInput label="Nome da Empresa" name="name" required />
             <FormInput label="CNPJ" name="taxId" required />
+            <FormSelect label="Equipamento Associado" name="equipmentId" options={[{ value: '', label: 'Nenhum' }, ...equipments.map(e => ({ value: e.id, label: `${e.name} (${e.code})` }))]} />
             <FormInput label="Pessoa de Contato" name="contactName" />
             <div className="grid grid-cols-2 gap-4">
               <FormInput label="Telefone" name="phone" />
@@ -654,7 +671,12 @@ export default function App() {
           </div>
           <form onSubmit={handleAddService} className="space-y-6">
             <FormInput label="Tipo de Serviço" name="serviceType" placeholder="Ex: Preventiva, Corretiva, Calibração" required />
-            <FormTextArea label="Descrição da Manutenção" name="description" placeholder="Descreva os procedimentos executados..." required />
+            <FormTextArea label="Descrição do Problema" name="description" placeholder="Descreva o problema relatado..." required />
+            <FormTextArea label="O que foi feito (Resolução)" name="resolution" placeholder="Descreva as ações tomadas para resolver o problema..." required />
+            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <input type="checkbox" name="isResolved" id="isResolved" className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <label htmlFor="isResolved" className="text-xs font-bold text-slate-700 uppercase tracking-widest">Problema Resolvido?</label>
+            </div>
             <FormSelect label="Status Final" name="status" defaultValue={selectedEquipment.status} options={[
               { value: EquipmentStatus.PENDING, label: 'Aguardando Peças' },
               { value: EquipmentStatus.IN_PROGRESS, label: 'Em Manutenção' },

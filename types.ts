@@ -28,6 +28,7 @@ export interface Supplier {
   contactName: string;
   email: string;
   phone: string;
+  equipmentId?: string;
 }
 
 export interface User {
@@ -45,6 +46,8 @@ export interface ServiceRecord {
   description: string;
   serviceType: string;
   technicianId: string;
+  isResolved: boolean;
+  resolution: string;
 }
 
 export interface Equipment {

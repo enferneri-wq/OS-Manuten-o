@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 import { Equipment, ServiceRecord, Customer, EquipmentStatus, Supplier } from "../types.ts";
 import { formatDate } from "../utils.ts";
 
-const BRAND_RED: [number, number, number] = [255, 61, 61];
+const BRAND_PRIMARY: [number, number, number] = [0, 92, 169];
 const DARK_GREY: [number, number, number] = [51, 51, 51];
 const LIGHT_GREY: [number, number, number] = [245, 245, 245];
 
@@ -18,8 +18,8 @@ const drawHeader = (doc: jsPDF, title: string, cnpj: string, brandName: string =
   doc.setFillColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.rect(0, 0, pageWidth, 35, 'F');
   
-  // Bloco decorativo vermelho na direita
-  doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
+  // Bloco decorativo azul na direita
+  doc.setFillColor(BRAND_PRIMARY[0], BRAND_PRIMARY[1], BRAND_PRIMARY[2]);
   doc.rect(pageWidth - 45, 0, 45, 35, 'F');
 
   // Identidade Visual Exclusiva
@@ -64,7 +64,7 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
   doc.setFont("helvetica", "bold");
   doc.text("1. IDENTIFICAÇÃO DO EQUIPAMENTO", 15, 50);
-  doc.setDrawColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
+  doc.setDrawColor(BRAND_PRIMARY[0], BRAND_PRIMARY[1], BRAND_PRIMARY[2]);
   doc.line(15, 52, pageWidth - 15, 52);
 
   const equipData = [
@@ -91,16 +91,17 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   const serviceData = (equipment.serviceRecords || []).map((s: ServiceRecord) => [
     formatDate(s.date),
     s.serviceType.toUpperCase(),
-    s.description
+    s.isResolved ? "SIM" : "NÃO",
+    s.resolution || s.description
   ]);
 
   autoTable(doc, {
     startY: lastY + 5,
-    head: [["DATA/HORA", "TIPO DE SERVIÇO", "PROCEDIMENTOS TÉCNICOS"]],
-    body: serviceData.length > 0 ? serviceData : [["-", "-", "Sem registros."]],
+    head: [["DATA/HORA", "TIPO", "RESOLVIDO", "DESCRIÇÃO/RESOLUÇÃO"]],
+    body: serviceData.length > 0 ? serviceData : [["-", "-", "-", "Sem registros."]],
     headStyles: { fillColor: DARK_GREY, textColor: [255, 255, 255] as [number, number, number] },
     alternateRowStyles: { fillColor: LIGHT_GREY },
-    styles: { fontSize: 8 }
+    styles: { fontSize: 7 }
   });
 
   doc.save(`Laudo_${equipment.code}.pdf`);
@@ -126,19 +127,30 @@ export const generateServiceOrderReport = (service: ServiceRecord, equipment: Eq
       [`Tipo de Serviço: ${service.serviceType.toUpperCase()}`]
     ],
     theme: 'grid',
-    headStyles: { fillColor: BRAND_RED, textColor: [255, 255, 255] as [number, number, number] },
+    headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255] as [number, number, number] },
     styles: { fontSize: 9 }
   });
 
   const descY = (doc as any).lastAutoTable.finalY + 10;
   doc.setFontSize(11);
-  doc.text("LAUDO TÉCNICO E PROCEDIMENTOS", 15, descY);
-  doc.rect(15, descY + 3, pageWidth - 30, 80);
-  doc.setFontSize(10);
+  doc.text("DESCRIÇÃO DO PROBLEMA", 15, descY);
+  doc.rect(15, descY + 3, pageWidth - 30, 30);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text(doc.splitTextToSize(service.description, pageWidth - 40), 20, descY + 10);
+
+  const resY = descY + 40;
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`STATUS FINAL: ${equipment.status.toUpperCase()}`, 15, descY + 90);
+  doc.text("AÇÕES TOMADAS (RESOLUÇÃO)", 15, resY);
+  doc.rect(15, resY + 3, pageWidth - 30, 40);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(doc.splitTextToSize(service.resolution || "Nenhuma descrição de resolução fornecida.", pageWidth - 40), 20, resY + 10);
+
+  doc.setFont("helvetica", "bold");
+  doc.text(`PROBLEMA RESOLVIDO: ${service.isResolved ? "SIM" : "NÃO"}`, 15, resY + 55);
+  doc.text(`STATUS FINAL: ${equipment.status.toUpperCase()}`, 15, resY + 62);
 
   const footerY = doc.internal.pageSize.getHeight() - 40;
   doc.line(20, footerY, 90, footerY);
@@ -177,7 +189,7 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
     startY: (doc as any).lastAutoTable.finalY + 10,
     head: [["CÓDIGO", "EQUIPAMENTO", "MARCA/MODELO", "UNIDADE", "STATUS", "ENTRADA"]],
     body: tableData,
-    headStyles: { fillColor: BRAND_RED },
+    headStyles: { fillColor: BRAND_PRIMARY },
     styles: { fontSize: 8 }
   });
 
@@ -216,7 +228,7 @@ export const generateSupplierListReport = (suppliers: Supplier[], cnpj: string, 
     startY: 45,
     head: [["FORNECEDOR", "CNPJ", "CONTATO", "TELEFONE"]],
     body: tableData,
-    headStyles: { fillColor: BRAND_RED },
+    headStyles: { fillColor: BRAND_PRIMARY },
     styles: { fontSize: 8 },
     alternateRowStyles: { fillColor: LIGHT_GREY }
   });

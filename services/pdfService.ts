@@ -9,9 +9,9 @@ const DARK_GREY: [number, number, number] = [51, 51, 51];
 const LIGHT_GREY: [number, number, number] = [245, 245, 245];
 
 /**
- * Desenha o cabeçalho técnico padronizado ALVS com título centralizado
+ * Desenha o cabeçalho técnico dinâmico focado exclusivamente na logomarca (imagem)
  */
-const drawHeader = (doc: jsPDF, title: string, cnpj: string) => {
+const drawHeader = (doc: jsPDF, title: string, cnpj: string, brandName: string = "ALVS", logoUrl: string | null = null) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   
   // Faixa superior cinza escura
@@ -20,54 +20,45 @@ const drawHeader = (doc: jsPDF, title: string, cnpj: string) => {
   
   // Bloco decorativo vermelho na direita
   doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
-  doc.rect(pageWidth - 60, 0, 60, 35, 'F');
+  doc.rect(pageWidth - 45, 0, 45, 35, 'F');
 
-  // Desenho da Logo ALVS (Lado Esquerdo)
+  // Identidade Visual Exclusiva
   const x = 15;
   const y = 5;
-  const s = 0.8;
   
-  // Triângulo Vermelho Logo
-  doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
-  doc.triangle(x + 1*s, y + 2*s, x + 7*s, y + 2*s, x + 1*s, y + 21*s, 'F');
-  
-  // Trapézio Branco Logo
-  doc.setFillColor(255, 255, 255);
-  doc.triangle(x + 8*s, y + 2*s, x + 47*s, y + 2*s, x + 47*s, y + 21*s, 'F');
-  doc.triangle(x + 8*s, y + 2*s, x + 47*s, y + 21*s, x + 2*s, y + 21*s, 'F');
-  
-  // Texto ALVS
-  doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(38 * s);
-  doc.text("ALVS", x + 9 * s, y + 17.5 * s);
-
-  // Cruz Médica no Bloco Vermelho
-  const cx = pageWidth - 39;
-  const cy = 8;
-  doc.setFillColor(255, 255, 255);
-  doc.rect(cx, cy, 18, 18, 'F');
-  doc.setFillColor(BRAND_RED[0], BRAND_RED[1], BRAND_RED[2]);
-  doc.rect(cx + 3, cy + 7.5, 12, 3, 'F');
-  doc.rect(cx + 7.5, cy + 3, 3, 12, 'F');
+  if (logoUrl) {
+    try {
+      // Adiciona a imagem personalizada se disponível
+      // Proporções mantidas, redimensionado para altura máx de 25
+      doc.addImage(logoUrl, 'PNG', x, y, 25, 25, undefined, 'FAST');
+    } catch (e) {
+      // Fallback em caso de erro na imagem - mostra apenas título do relatório
+    }
+  } else {
+    // Caso não tenha logo, exibimos apenas o nome da marca em fonte estilizada como substituto temporário
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text(brandName.toUpperCase(), x, y + 17);
+  }
 
   // TÍTULO DO RELATÓRIO (CENTRALIZADO)
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.text(title.toUpperCase(), pageWidth / 2, 18, { align: "center" });
 
-  // Informações Complementares (CNPJ e Slogan)
+  // Informações de Rodapé do Cabeçalho
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.text("ENGINEERING & MEDICAL", pageWidth / 2, 24, { align: "center" });
-  doc.text(`CNPJ: ${cnpj}`, pageWidth / 2, 28, { align: "center" });
+  doc.text("SISTEMA DE GESTÃO TÉCNICA", pageWidth / 2, 24, { align: "center" });
+  doc.text(`REGISTRO: ${cnpj}`, pageWidth / 2, 28, { align: "center" });
 };
 
-export const generateEquipmentReport = (equipment: Equipment, customerName: string, cnpj: string) => {
+export const generateEquipmentReport = (equipment: Equipment, customerName: string, cnpj: string, brandName?: string, logoUrl?: string | null) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "Laudo Técnico de Ativo", cnpj);
+  drawHeader(doc, "Laudo Técnico de Ativo", cnpj, brandName, logoUrl);
   
   doc.setFontSize(11);
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
@@ -77,10 +68,10 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   doc.line(15, 52, pageWidth - 15, 52);
 
   const equipData = [
-    ["CÓDIGO ALVS", equipment.code, "SITUAÇÃO", equipment.status.toUpperCase()],
+    ["SITUAÇÃO ATUAL", equipment.status.toUpperCase(), "IDENTIFICAÇÃO", equipment.code],
     ["DESCRIÇÃO", equipment.name.toUpperCase(), "UNIDADE", customerName.toUpperCase()],
     ["MARCA", equipment.brand.toUpperCase(), "MODELO", equipment.model.toUpperCase()],
-    ["Nº SÉRIE", equipment.serialNumber, "FABRICANTE", equipment.manufacturer.toUpperCase()],
+    ["Nº SÉRIE", equipment.serialNumber, "TÉCNICO RESP.", "SISTEMA"],
   ];
 
   autoTable(doc, {
@@ -98,26 +89,27 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
   doc.setFontSize(11);
   doc.text("2. HISTÓRICO DE MANUTENÇÕES", 15, lastY);
   const serviceData = (equipment.serviceRecords || []).map((s: ServiceRecord) => [
-    formatDate(s.date).split(',')[0],
+    formatDate(s.date),
+    s.serviceType.toUpperCase(),
     s.description
   ]);
 
   autoTable(doc, {
     startY: lastY + 5,
-    head: [["DATA", "PROCEDIMENTOS TÉCNICOS"]],
-    body: serviceData.length > 0 ? serviceData : [["-", "Sem registros."]],
+    head: [["DATA/HORA", "TIPO DE SERVIÇO", "PROCEDIMENTOS TÉCNICOS"]],
+    body: serviceData.length > 0 ? serviceData : [["-", "-", "Sem registros."]],
     headStyles: { fillColor: DARK_GREY, textColor: [255, 255, 255] as [number, number, number] },
     alternateRowStyles: { fillColor: LIGHT_GREY },
     styles: { fontSize: 8 }
   });
 
-  doc.save(`ALVS_Laudo_${equipment.code}.pdf`);
+  doc.save(`Laudo_${equipment.code}.pdf`);
 };
 
-export const generateServiceOrderReport = (service: ServiceRecord, equipment: Equipment, cnpj: string) => {
+export const generateServiceOrderReport = (service: ServiceRecord, equipment: Equipment, cnpj: string, brandName?: string, logoUrl?: string | null) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "Ordem de Serviço (OS)", cnpj);
+  drawHeader(doc, "Ordem de Serviço (OS)", cnpj, brandName, logoUrl);
   
   doc.setFontSize(10);
   doc.setTextColor(DARK_GREY[0], DARK_GREY[1], DARK_GREY[2]);
@@ -130,7 +122,8 @@ export const generateServiceOrderReport = (service: ServiceRecord, equipment: Eq
     head: [["DETALHES DO ATIVO"]],
     body: [
       [`${equipment.name} | Marca: ${equipment.brand} | Modelo: ${equipment.model}`],
-      [`Identificação ALVS: ${equipment.code} | Nº de Série: ${equipment.serialNumber}`]
+      [`Identificação Interna: ${equipment.code} | Nº de Série: ${equipment.serialNumber}`],
+      [`Tipo de Serviço: ${service.serviceType.toUpperCase()}`]
     ],
     theme: 'grid',
     headStyles: { fillColor: BRAND_RED, textColor: [255, 255, 255] as [number, number, number] },
@@ -149,17 +142,17 @@ export const generateServiceOrderReport = (service: ServiceRecord, equipment: Eq
 
   const footerY = doc.internal.pageSize.getHeight() - 40;
   doc.line(20, footerY, 90, footerY);
-  doc.text("TECNICO RESPONSÁVEL", 35, footerY + 5, { align: 'center' });
+  doc.text("TÉCNICO RESPONSÁVEL", 35, footerY + 5, { align: 'center' });
   doc.line(pageWidth - 90, footerY, pageWidth - 20, footerY);
   doc.text("RESPONSÁVEL UNIDADE", pageWidth - 55, footerY + 5, { align: 'center' });
 
-  doc.save(`ALVS_OS_${service.id.slice(0, 5)}.pdf`);
+  doc.save(`OS_${service.id.slice(0, 5)}.pdf`);
 };
 
-export const generateGlobalReport = (equipments: Equipment[], customers: Customer[], cnpj: string) => {
+export const generateGlobalReport = (equipments: Equipment[], customers: Customer[], cnpj: string, brandName?: string, logoUrl?: string | null) => {
   const doc = new jsPDF({ orientation: 'landscape' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  drawHeader(doc, "Relatório Gerencial de Frota", cnpj);
+  drawHeader(doc, "Relatório Gerencial de Equipamentos", cnpj, brandName, logoUrl);
 
   const total = equipments.length;
   const inMaint = equipments.filter(e => e.status === EquipmentStatus.IN_PROGRESS).length;
@@ -188,12 +181,12 @@ export const generateGlobalReport = (equipments: Equipment[], customers: Custome
     styles: { fontSize: 8 }
   });
 
-  doc.save(`ALVS_Relatorio_Consolidado.pdf`);
+  doc.save(`Relatorio_Consolidado.pdf`);
 };
 
-export const generateCustomerListReport = (customers: Customer[], cnpj: string) => {
+export const generateCustomerListReport = (customers: Customer[], cnpj: string, brandName?: string, logoUrl?: string | null) => {
   const doc = new jsPDF();
-  drawHeader(doc, "Relatório de Unidades de Saúde", cnpj);
+  drawHeader(doc, "Relatório de Unidades de Saúde", cnpj, brandName, logoUrl);
   
   const tableData = customers.map(c => [
     c.name.toUpperCase(), c.taxId, c.email, c.phone
@@ -208,12 +201,12 @@ export const generateCustomerListReport = (customers: Customer[], cnpj: string) 
     alternateRowStyles: { fillColor: LIGHT_GREY }
   });
 
-  doc.save("ALVS_Relatorio_Unidades.pdf");
+  doc.save("Relatorio_Unidades.pdf");
 };
 
-export const generateSupplierListReport = (suppliers: Supplier[], cnpj: string) => {
+export const generateSupplierListReport = (suppliers: Supplier[], cnpj: string, brandName?: string, logoUrl?: string | null) => {
   const doc = new jsPDF();
-  drawHeader(doc, "Relatório de Fornecedores", cnpj);
+  drawHeader(doc, "Relatório de Fornecedores", cnpj, brandName, logoUrl);
   
   const tableData = suppliers.map(s => [
     s.name.toUpperCase(), s.taxId, s.contactName, s.phone
@@ -228,5 +221,5 @@ export const generateSupplierListReport = (suppliers: Supplier[], cnpj: string) 
     alternateRowStyles: { fillColor: LIGHT_GREY }
   });
 
-  doc.save("ALVS_Relatorio_Fornecedores.pdf");
+  doc.save("Relatorio_Fornecedores.pdf");
 };

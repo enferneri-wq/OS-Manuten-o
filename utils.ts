@@ -12,6 +12,7 @@ export const formatDate = (dateStr: string): string => {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     }).format(new Date(dateStr));
   } catch (e) {
     return dateStr;

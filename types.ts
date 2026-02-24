@@ -43,6 +43,7 @@ export interface ServiceRecord {
   equipmentId: string;
   date: string;
   description: string;
+  serviceType: string;
   technicianId: string;
 }
 
@@ -58,6 +59,7 @@ export interface Equipment {
   observations: string;
   status: EquipmentStatus;
   customerId: string;
+  supplierId?: string;
   serviceRecords: ServiceRecord[];
 }
 

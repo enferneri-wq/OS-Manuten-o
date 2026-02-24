@@ -1,6 +1,6 @@
 {
   "name": "ALVS ENGINEERING & MEDICAL",
-  "description": "Sistema completo para gestão de equipamentos médicos, ordens de serviço, clientes e fornecedores para engenharia clínica.",
+  "description": "Sistema completo para gestão de equipamentos médicos, manutenções, clientes e fornecedores para engenharia clínica.",
   "requestFramePermissions": [
     "camera"
   ]

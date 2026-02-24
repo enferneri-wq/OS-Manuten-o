@@ -129,6 +129,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    loadLocalData();
     syncData();
   }, []);
 
@@ -308,7 +309,7 @@ export default function App() {
           <SidebarIcon icon={Briefcase} label="Fornecedores" id="suppliers" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
         <div className="mt-auto flex flex-col gap-4">
-          <SidebarIcon icon={Settings} label="Marca" id="brand" activeTab="" onClick={() => setIsBrandModalOpen(true)} color="text-blue-200 hover:text-white" />
+          <SidebarIcon icon={Settings} label="Marca" id="brand" activeTab="" onClick={() => { setLogoPreview(brandConfig.logoUrl); setIsBrandModalOpen(true); }} color="text-blue-200 hover:text-white" />
           <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-blue-200 hover:text-red-200" />
         </div>
       </aside>

@@ -89,6 +89,7 @@ export default function App() {
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -485,7 +486,11 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                      {filteredCustomers.map(c => (
-                       <div key={c.id} className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 hover:shadow-2xl transition-all group flex flex-col gap-6">
+                       <div 
+                         key={c.id} 
+                         onClick={() => setViewingCustomer(c)}
+                         className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 hover:shadow-2xl transition-all group flex flex-col gap-6 cursor-pointer hover:border-blue-200"
+                       >
                           <div className="flex justify-between items-start">
                              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 transition-all shrink-0"><Building2 size={24} /></div>
                              <div className="px-3 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded-full uppercase tracking-widest">Unidade Ativa</div>
@@ -568,6 +573,90 @@ export default function App() {
         <MobileNavItem icon={Users} label="Unidades" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
         <MobileNavItem icon={Briefcase} label="Suprim." active={activeTab === 'suppliers'} onClick={() => setActiveTab('suppliers')} />
       </nav>
+
+      {viewingCustomer && (
+        <Modal 
+          title={`Detalhes da Unidade: ${viewingCustomer.name}`} 
+          onClose={() => setViewingCustomer(null)}
+          className="max-w-4xl"
+        >
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">CNPJ / CPF</p>
+                <p className="text-xs font-bold text-slate-800">{viewingCustomer.taxId}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Contato</p>
+                <p className="text-xs font-bold text-slate-800">{viewingCustomer.phone}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">E-mail</p>
+                <p className="text-xs font-bold text-slate-800">{viewingCustomer.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                <HardDrive size={14} /> Equipamentos Vinculados ({equipments.filter(e => e.customerId === viewingCustomer.id).length})
+              </h4>
+              
+              <div className="grid grid-cols-1 gap-4">
+                {equipments.filter(e => e.customerId === viewingCustomer.id).length > 0 ? (
+                  equipments.filter(e => e.customerId === viewingCustomer.id).map(equip => (
+                    <div key={equip.id} className="bg-white border border-slate-100 rounded-[24px] p-5 hover:shadow-md transition-all">
+                      <div className="flex flex-col md:flex-row justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h5 className="font-black text-slate-800 text-sm uppercase">{equip.name}</h5>
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${getStatusBadge(equip.status as EquipmentStatus)}`}>
+                              {equip.status}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-3">{equip.code} | S/N: {equip.serialNumber}</p>
+                          
+                          <div className="space-y-3">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Histórico de Serviços</p>
+                            {equip.serviceRecords && equip.serviceRecords.length > 0 ? (
+                              <div className="space-y-2">
+                                {equip.serviceRecords.slice(0, 3).map(record => (
+                                  <div key={record.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <div className="flex justify-between items-start mb-1">
+                                      <span className="text-[9px] font-black text-blue-600 uppercase italic">{record.serviceType}</span>
+                                      <span className="text-[9px] font-bold text-slate-400">{formatDate(record.date)}</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-700 font-medium leading-relaxed">"{record.description}"</p>
+                                    {record.resolution && (
+                                      <div className="mt-2 pt-2 border-t border-slate-200">
+                                        <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Resolução:</p>
+                                        <p className="text-[10px] text-slate-600 italic">{record.resolution}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                {equip.serviceRecords.length > 3 && (
+                                  <p className="text-[9px] text-center text-slate-400 font-bold uppercase tracking-widest">+ {equip.serviceRecords.length - 3} outros registros</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">Nenhum serviço registrado para este equipamento.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
+                    <HardDrive size={32} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum equipamento vinculado a esta unidade.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {isBrandModalOpen && (
         <Modal title="Configurações de Marca" onClose={() => setIsBrandModalOpen(false)}>
@@ -760,10 +849,10 @@ function StatCard({ label, value, icon: Icon, color }: any) {
   );
 }
 
-function Modal({ title, children, onClose }: any) {
+function Modal({ title, children, onClose, className = "max-w-lg" }: any) {
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-4">
-      <div className="bg-white rounded-t-[40px] md:rounded-[40px] w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div className={`bg-white rounded-t-[40px] md:rounded-[40px] w-full ${className} shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200`}>
         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
           <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{title}</h3>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-red-500 bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>

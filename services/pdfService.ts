@@ -104,6 +104,20 @@ export const generateEquipmentReport = (equipment: Equipment, customerName: stri
     styles: { fontSize: 7 }
   });
 
+  const attachY = (doc as any).lastAutoTable.finalY + 15;
+  if (equipment.attachments && equipment.attachments.length > 0) {
+    doc.setFontSize(11);
+    doc.text("3. DOCUMENTOS E ANEXOS", 15, attachY);
+    const attachData = equipment.attachments.map(a => [a.name, formatDate(a.date)]);
+    autoTable(doc, {
+      startY: attachY + 5,
+      head: [["NOME DO ARQUIVO", "DATA DE ANEXO"]],
+      body: attachData,
+      headStyles: { fillColor: BRAND_PRIMARY },
+      styles: { fontSize: 8 }
+    });
+  }
+
   doc.save(`Laudo_${equipment.code}.pdf`);
 };
 
@@ -151,6 +165,17 @@ export const generateServiceOrderReport = (service: ServiceRecord, equipment: Eq
   doc.setFont("helvetica", "bold");
   doc.text(`PROBLEMA RESOLVIDO: ${service.isResolved ? "SIM" : "NÃO"}`, 15, resY + 55);
   doc.text(`STATUS FINAL: ${equipment.status.toUpperCase()}`, 15, resY + 62);
+
+  if (service.attachments && service.attachments.length > 0) {
+    const attY = resY + 75;
+    doc.setFontSize(10);
+    doc.text("ANEXOS DA ORDEM DE SERVIÇO:", 15, attY);
+    service.attachments.forEach((att, index) => {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`- ${att.name}`, 20, attY + 7 + (index * 5));
+    });
+  }
 
   const footerY = doc.internal.pageSize.getHeight() - 40;
   doc.line(20, footerY, 90, footerY);

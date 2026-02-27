@@ -41,6 +41,14 @@ export interface User {
   role: UserRole;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  date: string;
+}
+
 export interface ServiceRecord {
   id: string;
   equipmentId: string;
@@ -50,6 +58,7 @@ export interface ServiceRecord {
   technicianId: string;
   isResolved: boolean;
   resolution: string;
+  attachments?: Attachment[];
 }
 
 export interface Equipment {
@@ -66,6 +75,7 @@ export interface Equipment {
   customerId: string;
   supplierId?: string;
   serviceRecords: ServiceRecord[];
+  attachments?: Attachment[];
 }
 
 export type EntityType = 'equipment' | 'customer' | 'supplier' | 'user';

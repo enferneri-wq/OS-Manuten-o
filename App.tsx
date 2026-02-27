@@ -16,9 +16,9 @@ import {
 } from 'recharts';
 import { 
   Equipment, Customer, EquipmentStatus, 
-  ServiceRecord, Supplier 
+  ServiceRecord, Supplier, Attachment 
 } from './types.ts';
-import { generateUniqueCode, generateUUID, formatDate } from './utils.ts';
+import { generateUniqueCode, generateUUID, formatDate, fileToBase64 } from './utils.ts';
 import { 
   generateEquipmentReport, 
   generateGlobalReport, 
@@ -81,6 +81,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   const [isEquipModalOpen, setIsEquipModalOpen] = useState(false);
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -90,6 +91,7 @@ export default function App() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [tempAttachments, setTempAttachments] = useState<Attachment[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -217,7 +219,8 @@ export default function App() {
       status: EquipmentStatus.PENDING,
       customerId: fd.get('customerId') as string, 
       supplierId: fd.get('supplierId') as string,
-      serviceRecords: []
+      serviceRecords: [],
+      attachments: []
     };
     setEquipments([newItem, ...equipments]);
     setIsEquipModalOpen(false);
@@ -258,7 +261,11 @@ export default function App() {
     e.preventDefault();
     if (!selectedEquipment) return;
     const fd = new FormData(e.currentTarget);
-    const newStatus = fd.get('status') as EquipmentStatus;
+    const isResolved = fd.get('isResolved') === 'on';
+    
+    // Automação: Se resolvido -> Aguardando Retirada. Se não -> Aguardando Serviço (Pendente)
+    const newStatus = isResolved ? EquipmentStatus.READY : EquipmentStatus.PENDING;
+
     const newRecord: ServiceRecord = {
       id: generateUUID(), 
       equipmentId: selectedEquipment.id,
@@ -266,8 +273,9 @@ export default function App() {
       description: fd.get('description') as string, 
       serviceType: fd.get('serviceType') as string,
       technicianId: 'u1',
-      isResolved: fd.get('isResolved') === 'on',
+      isResolved: isResolved,
       resolution: fd.get('resolution') as string,
+      attachments: tempAttachments
     };
     const updated = equipments.map(eq => {
       if (eq.id === selectedEquipment.id) {
@@ -276,7 +284,30 @@ export default function App() {
       return eq;
     });
     setEquipments(updated);
+    setTempAttachments([]);
     setIsServiceModalOpen(false);
+  };
+
+  const handleUpdateAttachments = (newAtts: Attachment[]) => {
+    if (!selectedEquipment) return;
+    const updated = equipments.map(eq => {
+      if (eq.id === selectedEquipment.id) {
+        return { ...eq, attachments: [...(eq.attachments || []), ...newAtts] };
+      }
+      return eq;
+    });
+    setEquipments(updated);
+  };
+
+  const handleRemoveAttachment = (attId: string) => {
+    if (!selectedEquipment) return;
+    const updated = equipments.map(eq => {
+      if (eq.id === selectedEquipment.id) {
+        return { ...eq, attachments: (eq.attachments || []).filter(a => a.id !== attId) };
+      }
+      return eq;
+    });
+    setEquipments(updated);
   };
 
   const handleAiAdvice = async (equip: Equipment) => {
@@ -385,7 +416,19 @@ export default function App() {
                     <div className="space-y-4">
                       {filteredServices.map((service) => (
                         <div key={service.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100 group">
-                          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0"><Wrench size={18} /></div>
+                          <button 
+                            onClick={() => {
+                              const equip = equipments.find(e => e.id === service.equipmentId);
+                              if (equip) {
+                                setSelectedEquipment(equip);
+                                setIsServiceModalOpen(true);
+                              }
+                            }}
+                            className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                            title="Nova Manutenção"
+                          >
+                            <Wrench size={18} />
+                          </button>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-slate-800 truncate">{service.equipName}</p>
                             <div className="flex items-center gap-2">
@@ -443,8 +486,9 @@ export default function App() {
                             {equip.status}
                           </span>
                           <div className="flex gap-2">
-                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm"><Wrench size={16} /></button>
-                            <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '', ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)} className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm"><FileText size={16} /></button>
+                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Manutenção"><Wrench size={16} /></button>
+                            <button onClick={() => { setSelectedEquipment(equip); setIsAttachmentModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Anexos"><Upload size={16} /></button>
+                            <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '', ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)} className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm" title="Relatório"><FileText size={16} /></button>
                           </div>
                         </div>
                         <h4 className="text-md font-black text-slate-800 truncate">{equip.name}</h4>
@@ -455,6 +499,7 @@ export default function App() {
                           {equip.serviceRecords && equip.serviceRecords.length > 0 && (
                             <div className="flex items-center gap-2 truncate font-bold text-blue-600"><Wrench size={12} className="shrink-0" /> {equip.serviceRecords[0].serviceType}</div>
                           )}
+                          <AttachmentList attachments={equip.attachments} />
                         </div>
                         <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all">
                           <Sparkles size={12} /> Diagnóstico IA
@@ -614,6 +659,7 @@ export default function App() {
                             </span>
                           </div>
                           <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-3">{equip.code} | S/N: {equip.serialNumber}</p>
+                          <AttachmentList attachments={equip.attachments} label="Documentos do Equipamento" />
                           
                           <div className="space-y-3">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Histórico de Serviços</p>
@@ -626,6 +672,7 @@ export default function App() {
                                       <span className="text-[9px] font-bold text-slate-400">{formatDate(record.date)}</span>
                                     </div>
                                     <p className="text-[11px] text-slate-700 font-medium leading-relaxed">"{record.description}"</p>
+                                    <AttachmentList attachments={record.attachments} label="Anexos do Serviço" />
                                     {record.resolution && (
                                       <div className="mt-2 pt-2 border-t border-slate-200">
                                         <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Resolução:</p>
@@ -718,8 +765,74 @@ export default function App() {
             </div>
             <FormInput label="Nº de Série" name="serialNumber" placeholder="SN-827364" required />
             <FormTextArea label="Observações de Entrada" name="observations" placeholder="Estado inicial..." />
+            
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Cadastrar Equipamento</button>
           </form>
+        </Modal>
+      )}
+
+      {isAttachmentModalOpen && selectedEquipment && (
+        <Modal title={`Gerenciar Anexos: ${selectedEquipment.name}`} onClose={() => setIsAttachmentModalOpen(false)}>
+          <div className="space-y-6">
+            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+              <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Equipamento</p>
+              <p className="text-xs font-bold text-slate-800">{selectedEquipment.code} | {selectedEquipment.name}</p>
+            </div>
+            
+            <FileUploader 
+              label="Adicionar Novos Documentos"
+              attachments={[]} 
+              onUpload={handleUpdateAttachments}
+              onRemove={() => {}}
+            />
+
+            <div className="space-y-3">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Arquivos Atuais</p>
+              <div className="grid grid-cols-1 gap-2">
+                {(equipments.find(e => e.id === selectedEquipment.id)?.attachments || []).length > 0 ? (
+                  (equipments.find(e => e.id === selectedEquipment.id)?.attachments || []).map(att => (
+                    <div key={att.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="p-2 bg-slate-50 rounded-lg text-blue-500">
+                          {att.type.includes('image') ? <ImageIcon size={14} /> : <FileText size={14} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-slate-700 truncate">{att.name}</p>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase">{formatDate(att.date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a 
+                          href={att.url} 
+                          download={att.name}
+                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                          title="Baixar"
+                        >
+                          <Download size={16} />
+                        </a>
+                        <button 
+                          onClick={() => handleRemoveAttachment(att.id)}
+                          className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                          title="Excluir"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[10px] text-slate-400 italic text-center py-4">Nenhum arquivo anexado.</p>
+                )}
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setIsAttachmentModalOpen(false)}
+              className="w-full py-4 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all"
+            >
+              Fechar
+            </button>
+          </div>
         </Modal>
       )}
 
@@ -755,7 +868,7 @@ export default function App() {
       )}
 
       {isServiceModalOpen && selectedEquipment && (
-        <Modal title="Registro de Manutenção" onClose={() => setIsServiceModalOpen(false)}>
+        <Modal title="Registro de Manutenção" onClose={() => { setIsServiceModalOpen(false); setTempAttachments([]); }}>
           <div className="bg-blue-50 p-6 rounded-[24px] mb-8 border border-blue-100">
             <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">Equipamento em Atendimento</p>
             <p className="text-sm font-bold text-slate-800">{selectedEquipment.name} <span className="text-slate-400 font-mono text-xs ml-2">[{selectedEquipment.code}]</span></p>
@@ -768,13 +881,22 @@ export default function App() {
               <input type="checkbox" name="isResolved" id="isResolved" className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
               <label htmlFor="isResolved" className="text-xs font-bold text-slate-700 uppercase tracking-widest">Problema Resolvido?</label>
             </div>
-            <FormSelect label="Status Final" name="status" defaultValue={selectedEquipment.status} options={[
-              { value: EquipmentStatus.PENDING, label: 'Aguardando Peças' },
-              { value: EquipmentStatus.IN_PROGRESS, label: 'Em Manutenção' },
-              { value: EquipmentStatus.COMPLETED, label: 'Serviço Concluído' },
-              { value: EquipmentStatus.READY, label: 'Aguardando Retirada' },
-              { value: EquipmentStatus.DELIVERED, label: 'Entregue ao Cliente' },
-            ]} />
+            
+            <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Atualização Automática de Status</p>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Se marcado como <b>Resolvido</b>, o status mudará para <b>Aguardando Retirada</b>. 
+                Caso contrário, retornará para <b>Aguardando Serviço</b>.
+              </p>
+            </div>
+
+            <FileUploader 
+              label="Documentos / Fotos da Manutenção"
+              attachments={tempAttachments} 
+              onUpload={(newAtts) => setTempAttachments([...tempAttachments, ...newAtts])}
+              onRemove={(id) => setTempAttachments(tempAttachments.filter(a => a.id !== id))}
+            />
+
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Salvar Manutenção</button>
           </form>
         </Modal>
@@ -844,6 +966,97 @@ function StatCard({ label, value, icon: Icon, color }: any) {
       <div>
         <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">{label}</p>
         <p className="text-2xl font-black text-slate-800 tracking-tighter">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentList({ attachments, label }: { attachments?: Attachment[], label?: string }) {
+  if (!attachments || attachments.length === 0) return null;
+  
+  return (
+    <div className="space-y-2 mt-3">
+      {label && <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{label}</p>}
+      <div className="flex flex-wrap gap-2">
+        {attachments.map(att => (
+          <a 
+            key={att.id} 
+            href={att.url} 
+            download={att.name}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm group"
+          >
+            {att.type.includes('image') ? <ImageIcon size={12} className="text-blue-500" /> : <FileText size={12} className="text-slate-400" />}
+            <span className="max-w-[120px] truncate">{att.name}</span>
+            <Download size={10} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FileUploader({ attachments, onUpload, onRemove, label = "Documentos e Imagens" }: { attachments: Attachment[], onUpload: (atts: Attachment[]) => void, onRemove: (id: string) => void, label?: string }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    const newAttachments: Attachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const base64 = await fileToBase64(file);
+      newAttachments.push({
+        id: generateUUID(),
+        name: file.name,
+        url: base64,
+        type: file.type,
+        date: new Date().toISOString()
+      });
+    }
+    onUpload(newAttachments);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <div className="grid grid-cols-1 gap-2">
+        {attachments.map(att => (
+          <div key={att.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="p-2 bg-white rounded-lg text-blue-500 shadow-sm">
+                {att.type.includes('image') ? <ImageIcon size={14} /> : <FileText size={14} />}
+              </div>
+              <span className="text-[10px] font-bold text-slate-700 truncate">{att.name}</span>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => onRemove(att.id)}
+              className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+        <button 
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-400 hover:bg-slate-50 hover:border-blue-300 transition-all group"
+        >
+          <Upload size={18} className="group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Anexar Arquivos (PDF/IMG)</span>
+        </button>
+        <input 
+          type="file" 
+          ref={inputRef} 
+          onChange={handleFileChange} 
+          multiple 
+          accept="image/*,application/pdf" 
+          className="hidden" 
+        />
       </div>
     </div>
   );

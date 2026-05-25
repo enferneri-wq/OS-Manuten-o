@@ -95,6 +95,68 @@ export default function App() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedCompanyEquipId, setSelectedCompanyEquipId] = useState<string | null>(null);
+  const [newCustomerEquipPhoto, setNewCustomerEquipPhoto] = useState<string | null>(null);
+  const [equipFormCustomerId, setKeepEquipFormCustomerId] = useState<string>('');
+
+  const openEquipModal = (companyId?: string) => {
+    if (companyId) {
+      setKeepEquipFormCustomerId(companyId);
+    } else if (selectedCompanyId) {
+      setKeepEquipFormCustomerId(selectedCompanyId);
+    } else if (customers.length > 0) {
+      setKeepEquipFormCustomerId(customers[0].id);
+    } else {
+      setKeepEquipFormCustomerId('');
+    }
+    setIsEquipModalOpen(true);
+  };
+
+  const getLastMaintenanceInfo = (equip: Equipment) => {
+    if (!equip.serviceRecords || equip.serviceRecords.length === 0) {
+      return { date: 'Nenhuma realizada', details: 'Sem registros de manutenção.' };
+    }
+    const sorted = [...equip.serviceRecords].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const last = sorted[0];
+    return {
+      date: formatDate(last.date),
+      details: last.resolution || last.description || 'Sem descrição.'
+    };
+  };
+
+  const handleEquipmentPhotoUpload = async (equipId: string, file: File) => {
+    try {
+      const base64 = await fileToBase64(file);
+      const updated = equipments.map(eq => {
+        if (eq.id === equipId) {
+          return { ...eq, photoUrl: base64 };
+        }
+        return eq;
+      });
+      setEquipments(updated);
+    } catch (err) {
+      console.error("Error uploading photo:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (customers.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(customers[0].id);
+    }
+  }, [customers, selectedCompanyId]);
+
+  useEffect(() => {
+    if (selectedCompanyId) {
+      const companyEquips = equipments.filter(e => e.customerId === selectedCompanyId);
+      if (companyEquips.length > 0) {
+        setSelectedCompanyEquipId(companyEquips[0].id);
+      } else {
+        setSelectedCompanyEquipId(null);
+      }
+    }
+  }, [selectedCompanyId, equipments]);
+
   const loadLocalData = () => {
     const savedEquip = localStorage.getItem(STORAGE_KEY_EQUIP);
     const savedCust = localStorage.getItem(STORAGE_KEY_CUST);
@@ -108,6 +170,13 @@ export default function App() {
       const parsedBrand = JSON.parse(savedBrand);
       setBrandConfig(parsedBrand);
       setLogoPreview(parsedBrand.logoUrl);
+    }
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>, equipId: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleEquipmentPhotoUpload(equipId, file);
     }
   };
 
@@ -229,8 +298,9 @@ export default function App() {
   const handleAddCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const newCustId = generateUUID();
     const newCust: Customer = {
-      id: generateUUID(),
+      id: newCustId,
       name: fd.get('name') as string,
       taxId: fd.get('taxId') as string,
       email: fd.get('email') as string,
@@ -238,6 +308,32 @@ export default function App() {
       address: fd.get('address') as string,
     };
     setCustomers([newCust, ...customers]);
+
+    // Check if initial equipment is provided
+    const equipName = fd.get('equipName') as string;
+    if (equipName && equipName.trim() !== '') {
+      const newEquip: Equipment = {
+        id: generateUUID(),
+        code: generateUniqueCode(brandConfig.name),
+        name: equipName,
+        brand: (fd.get('equipBrand') as string) || '',
+        model: '',
+        manufacturer: '',
+        serialNumber: (fd.get('equipSerial') as string) || 'S/N',
+        entryDate: new Date().toISOString(),
+        observations: 'Cadastrado junto com a empresa.',
+        status: EquipmentStatus.PENDING,
+        customerId: newCustId,
+        supplierId: '',
+        serviceRecords: [],
+        attachments: [],
+        photoUrl: newCustomerEquipPhoto || undefined
+      };
+      setEquipments(prev => [newEquip, ...prev]);
+    }
+
+    setNewCustomerEquipPhoto(null);
+    setSelectedCompanyId(newCustId); // Auto-select the newly created company
     setIsCustomerModalOpen(false);
   };
 
@@ -321,7 +417,7 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard': return 'Status Engenharia';
       case 'equipment': return 'Equipamentos Médicos';
-      case 'customers': return 'Clientes';
+      case 'customers': return 'Cadastro de Empresas';
       case 'suppliers': return 'Fornecedores';
       default: return 'Sistema';
     }
@@ -330,17 +426,17 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-inter text-slate-900">
       {/* Sidebar Desktop */}
-      <aside className="hidden md:flex w-24 lg:w-48 bg-[#005ca9] border-r border-blue-400/20 flex-col items-center py-8 z-50 transition-all shadow-xl">
+      <aside className="hidden md:flex w-24 lg:w-48 bg-[#005ca9] border-r border-blue-400/20 flex-col py-8 z-50 transition-all shadow-xl">
         <div className="mb-10 px-4 w-full h-24 flex items-center justify-center">
           <Logo config={brandConfig} className="w-full" />
         </div>
-        <nav className="flex-1 flex flex-col gap-6">
+        <nav className="w-full px-3 flex-1 flex flex-col gap-4">
           <SidebarIcon icon={LayoutDashboard} label="Painel" id="dashboard" activeTab={activeTab} onClick={setActiveTab} />
           <SidebarIcon icon={Wrench} label="Equipamentos" id="equipment" activeTab={activeTab} onClick={setActiveTab} />
-          <SidebarIcon icon={Users} label="Clientes" id="customers" activeTab={activeTab} onClick={setActiveTab} />
+          <SidebarIcon icon={Users} label="Empresas" id="customers" activeTab={activeTab} onClick={setActiveTab} />
           <SidebarIcon icon={Briefcase} label="Fornecedores" id="suppliers" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
-        <div className="mt-auto flex flex-col gap-4">
+        <div className="w-full px-3 mt-auto flex flex-col gap-3">
           <SidebarIcon icon={Settings} label="Marca" id="brand" activeTab="" onClick={() => { setLogoPreview(brandConfig.logoUrl); setIsBrandModalOpen(true); }} color="text-blue-200 hover:text-white" />
           <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-blue-200 hover:text-red-200" />
         </div>
@@ -472,7 +568,7 @@ export default function App() {
                       >
                         <Download size={18} className="text-red-500" /> Exportar Inventário
                       </button>
-                      <button onClick={() => setIsEquipModalOpen(true)} className="bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
+                      <button onClick={() => openEquipModal()} className="bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
                         <Plus size={20} /> Novo Registro
                       </button>
                     </div>
@@ -496,9 +592,16 @@ export default function App() {
                         <div className="space-y-2 text-[11px] text-slate-600 bg-slate-50 p-4 rounded-xl mb-6 flex-1 border border-slate-100">
                           <div className="flex items-center gap-2 truncate font-semibold"><Building2 size={12} className="text-blue-400 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
                           <div className="flex items-center gap-2 truncate font-semibold"><HardDrive size={12} className="text-slate-400 shrink-0" /> S/N: {equip.serialNumber}</div>
-                          {equip.serviceRecords && equip.serviceRecords.length > 0 && (
-                            <div className="flex items-center gap-2 truncate font-bold text-blue-600"><Wrench size={12} className="shrink-0" /> {equip.serviceRecords[0].serviceType}</div>
-                          )}
+                          {equip.serviceRecords && equip.serviceRecords.length > 0 ? (
+                            <div className="flex items-center gap-2 truncate font-bold text-blue-600">
+                              <Wrench size={12} className="shrink-0 text-blue-500" />
+                              <span>Último serviço: {equip.serviceRecords[0].serviceType}</span>
+                            </div>
+                          ) : null}
+                          <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-slate-200">
+                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Última Manutenção</span>
+                            <span className="text-[11px] font-bold text-slate-700">{getLastMaintenanceInfo(equip).date}</span>
+                          </div>
                           <AttachmentList attachments={equip.attachments} />
                         </div>
                         <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all">
@@ -511,46 +614,295 @@ export default function App() {
               )}
 
               {activeTab === 'customers' && (
-                <div className="space-y-6">
+                <div className="space-y-8 animate-in fade-in duration-300">
+                  {/* Top Bar */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Unidades Atendidas</h3>
-                      <p className="text-xs text-slate-400 font-medium tracking-wide">Base de hospitais e clínicas cadastradas</p>
+                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Cadastro de Empresas</h3>
+                      <p className="text-xs text-slate-400 font-medium tracking-wide">Gerenciamento de empresas parceiras, equipamentos vinculados e registros de manutenção</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                       <button 
                         onClick={() => generateCustomerListReport(customers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
                         className="px-6 py-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm"
                       >
-                        <Download size={18} className="text-red-500" /> Relatório de Clientes
+                        <Download size={18} className="text-red-500" /> Relatório de Empresas
                       </button>
                       <button onClick={() => setIsCustomerModalOpen(true)} className="bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
-                        <Plus size={20} /> Nova Unidade
+                        <Plus size={20} /> Nova Empresa
                       </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                     {filteredCustomers.map(c => (
-                       <div 
-                         key={c.id} 
-                         onClick={() => setViewingCustomer(c)}
-                         className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 hover:shadow-2xl transition-all group flex flex-col gap-6 cursor-pointer hover:border-blue-200"
-                       >
-                          <div className="flex justify-between items-start">
-                             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 transition-all shrink-0"><Building2 size={24} /></div>
-                             <div className="px-3 py-1 bg-green-50 text-green-600 text-[9px] font-black rounded-full uppercase tracking-widest">Unidade Ativa</div>
+
+                  {/* Main Grid split */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    {/* Column 1: Lista de Empresas */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selecione uma Empresa ({filteredCustomers.length})</p>
+                      </div>
+                      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map(c => {
+                            const isActive = selectedCompanyId === c.id;
+                            const companyEquipsCount = equipments.filter(e => e.customerId === c.id).length;
+                            return (
+                              <div 
+                                key={c.id} 
+                                onClick={() => setSelectedCompanyId(c.id)}
+                                className={`p-5 rounded-[24px] border transition-all cursor-pointer flex flex-col gap-3 group relative ${
+                                  isActive 
+                                    ? 'bg-blue-50/50 border-blue-200 shadow-md scale-[1.01]' 
+                                    : 'bg-white border-slate-100 hover:border-slate-300'
+                                }`}
+                              >
+                                {isActive && (
+                                  <div className="absolute top-4 right-4 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                                )}
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2.5 rounded-xl flex items-center justify-center transition-all ${
+                                    isActive ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-50 text-slate-500'
+                                  }`}>
+                                    <Building2 size={16} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-black text-slate-800 uppercase tracking-tight truncate leading-tight group-hover:text-blue-600">{c.name}</p>
+                                    <p className="text-[10px] font-bold font-mono text-slate-400 mt-0.5 truncate">{c.taxId}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between pt-1 text-[10px] border-t border-slate-50">
+                                  <span className="text-slate-500 font-medium font-inter">Ativos vinculados</span>
+                                  <span className="font-bold text-slate-700 bg-slate-50 px-2.5 py-0.5 rounded-full">{companyEquipsCount} {companyEquipsCount === 1 ? 'Ativo' : 'Ativos'}</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+                            <Building2 className="mx-auto text-slate-300 mb-2" size={24} />
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma empresa encontrada.</p>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">{c.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{c.taxId}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 2 & 3: Painel de Controle e Equipamentos */}
+                    <div className="lg:col-span-2 space-y-6">
+                      {selectedCompanyId ? (() => {
+                        const currentCompany = customers.find(c => c.id === selectedCompanyId);
+                        if (!currentCompany) return null;
+                        const companyEquipments = equipments.filter(e => e.customerId === selectedCompanyId);
+                        const selectedEquip = companyEquipments.find(e => e.id === selectedCompanyEquipId) || companyEquipments[0];
+
+                        return (
+                          <div className="space-y-6">
+                            {/* Card de Informações da Empresa */}
+                            <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-6">
+                              <div className="flex justify-between items-start flex-wrap gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><Building2 size={28} /></div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none mb-2">{currentCompany.name}</h4>
+                                    <span className="bg-green-50 text-green-600 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-green-100">Parceiro Oficial</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => setViewingCustomer(currentCompany)} className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all">Ver Detalhes</button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-50 pt-6">
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CNPJ / CPF</span>
+                                  <span className="text-xs text-slate-700 font-mono font-bold truncate">{currentCompany.taxId}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">E-mail de Contato</span>
+                                  <span className="text-xs text-slate-700 font-semibold truncate hover:text-blue-600 cursor-pointer">{currentCompany.email || 'Não informado'}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone</span>
+                                  <span className="text-xs text-slate-700 font-semibold truncate">{currentCompany.phone || 'Não informado'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Detalhes do Equipamento Vinculado */}
+                            <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+                              <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                    <HardDrive size={16} className="text-blue-500" /> Informações do Equipamento
+                                  </h4>
+                                  <p className="text-[10px] text-slate-400 font-semibold tracking-wide">Selecione para puxar as informações e a última manutenção direta do banco de dados</p>
+                                </div>
+                                {companyEquipments.length > 0 && (
+                                  <button 
+                                    onClick={() => openEquipModal(currentCompany.id)}
+                                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-widest rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5"
+                                  >
+                                    <Plus size={14} /> Vincular Novo Equipamento
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="space-y-4">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Escolha o Equipamento Ativo</label>
+                                {companyEquipments.length > 0 ? (
+                                  <select
+                                    value={selectedCompanyEquipId || ""}
+                                    onChange={(e) => setSelectedCompanyEquipId(e.target.value)}
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black font-mono text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer uppercase shadow-inner"
+                                  >
+                                    {companyEquipments.map((eq) => (
+                                      <option key={eq.id} value={eq.id}>
+                                        {eq.name} — ({eq.code}) [S/N: {eq.serialNumber}]
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Nenhum equipamento cadastrado para esta empresa.</p>
+                                    <button 
+                                      onClick={() => {
+                                        openEquipModal(currentCompany.id);
+                                      }}
+                                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                                    >
+                                      <Plus size={12} /> Vincular Equipamento agora
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {selectedEquip && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-50">
+                                  {/* Col 1: Foto e Botão de Envio de arquivos */}
+                                  <div className="space-y-4">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Foto Oficial do Equipamento</p>
+                                    <div className="relative group rounded-[24px] overflow-hidden border border-slate-200 bg-slate-50 h-56 flex flex-col items-center justify-center shadow-inner transition-all hover:border-blue-300">
+                                      {selectedEquip.photoUrl ? (
+                                        <img 
+                                          src={selectedEquip.photoUrl} 
+                                          alt={selectedEquip.name} 
+                                          className="w-full h-full object-contain p-4"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      ) : (
+                                        <div className="text-center p-6 flex flex-col items-center gap-2">
+                                          <ImageIcon size={32} className="text-slate-300" />
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sem foto do ativo cadastrada</p>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Hover Overlay para Upload */}
+                                      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                                        <button 
+                                          onClick={() => {
+                                            const fileInput = document.getElementById(`equip-photo-input-${selectedEquip.id}`) as HTMLInputElement;
+                                            fileInput?.click();
+                                          }} 
+                                          className="px-4 py-2.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg"
+                                        >
+                                          <Upload size={12} /> Enviar Nova Foto
+                                        </button>
+                                        <span className="text-[8px] text-blue-100 font-bold uppercase tracking-wider">Formatos aceitos: Imagens</span>
+                                      </div>
+                                      
+                                      <input 
+                                        type="file" 
+                                        id={`equip-photo-input-${selectedEquip.id}`}
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        onChange={(e) => handlePhotoFileChange(e, selectedEquip.id)}
+                                      />
+                                    </div>
+                                    
+                                    {selectedEquip.photoUrl && (
+                                      <div className="flex justify-between items-center px-1">
+                                        {/* Download Link */}
+                                        <a 
+                                          href={selectedEquip.photoUrl}
+                                          download={`Foto_${selectedEquip.code}.png`}
+                                          className="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest flex items-center gap-1 transition-all"
+                                        >
+                                          <Download size={12} /> Baixar Imagem do Ativo
+                                        </a>
+                                        <button 
+                                          onClick={() => {
+                                            const updated = equipments.map(eq => {
+                                              if (eq.id === selectedEquip.id) {
+                                                return { ...eq, photoUrl: undefined };
+                                              }
+                                              return eq;
+                                            });
+                                            setEquipments(updated);
+                                          }}
+                                          className="text-[9px] font-black text-red-500 hover:opacity-75 uppercase tracking-widest flex items-center gap-1 transition-all"
+                                        >
+                                          <Trash2 size={12} /> Remover
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Col 2: Informações Técnicas e Última Manutenção */}
+                                  <div className="space-y-6">
+                                    <div className="space-y-4">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Especificações do Sistema</p>
+                                      <div className="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-100">
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Identificação:</span> <span className="font-bold text-slate-800 font-mono uppercase">{selectedEquip.code}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Nº de Série:</span> <span className="font-bold text-slate-800 font-mono">{selectedEquip.serialNumber}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Marca/Modelo:</span> <span className="font-bold text-slate-800 uppercase">{selectedEquip.brand} / {selectedEquip.model}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Data de Entrada:</span> <span className="font-bold text-slate-800">{formatDate(selectedEquip.entryDate).split(',')[0]}</span></div>
+                                        <div className="flex justify-between text-xs font-medium items-center pt-2 border-t border-slate-200">
+                                          <span className="text-slate-400">Situação:</span> 
+                                          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${getStatusBadge(selectedEquip.status as EquipmentStatus)}`}>
+                                            {selectedEquip.status}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Última Manutenção */}
+                                    <div className="p-5 rounded-[24px] border border-dashed border-blue-200 bg-blue-50/20 space-y-3">
+                                      <div className="flex items-center gap-2">
+                                        <Wrench size={16} className="text-[#005ca9]" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[#005ca9]">Última Manutenção Ativa</p>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <div>
+                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Data da manutenção</span>
+                                          <p className="text-xs font-bold text-slate-800">{getLastMaintenanceInfo(selectedEquip).date}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">O que foi feito / Resolução</span>
+                                          <p className="text-xs text-slate-600 leading-relaxed italic bg-white p-3 rounded-xl border border-slate-100 font-medium">
+                                            "{getLastMaintenanceInfo(selectedEquip).details}"
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-red-500 shrink-0" /> {c.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-red-500 shrink-0" /> {c.phone}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><MapPin size={14} className="text-red-500 shrink-0" /> {c.address}</div>
+                        );
+                      })() : (
+                        <div className="text-center py-24 bg-white rounded-[32px] border border-dashed border-slate-200 shadow-sm flex flex-col items-center justify-center gap-4">
+                          <Building2 size={48} className="text-slate-200" />
+                          <div>
+                            <p className="text-sm font-black text-slate-700 uppercase tracking-wider">Nenhuma Empresa Selecionada</p>
+                            <p className="text-xs text-slate-400 mt-1">Escolha uma empresa ao lado ou clique abaixo para cadastrar</p>
                           </div>
-                       </div>
-                     ))}
+                          <button onClick={() => setIsCustomerModalOpen(true)} className="px-6 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg hover:shadow-red-500/10">
+                            <Plus size={14} /> Cadastrar Nova Empresa
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -615,7 +967,7 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around h-20 px-4 z-50 shadow-2xl">
         <MobileNavItem icon={LayoutDashboard} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         <MobileNavItem icon={Wrench} label="Ativos" active={activeTab === 'equipment'} onClick={() => setActiveTab('equipment')} />
-        <MobileNavItem icon={Users} label="Unidades" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+        <MobileNavItem icon={Users} label="Empresas" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
         <MobileNavItem icon={Briefcase} label="Suprim." active={activeTab === 'suppliers'} onClick={() => setActiveTab('suppliers')} />
       </nav>
 
@@ -755,8 +1107,14 @@ export default function App() {
         <Modal title="Novo Equipamento" onClose={() => setIsEquipModalOpen(false)}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
             <FormInput label="Equipamento" name="name" placeholder="Ex: Monitor de Sinais Vitais" required />
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect label="Cliente Vinculado" name="customerId" options={customers.map(c => ({ value: c.id, label: c.name }))} />
+             <div className="grid grid-cols-2 gap-4">
+              <FormSelect 
+                label="Cliente Vinculado" 
+                name="customerId" 
+                value={equipFormCustomerId} 
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setKeepEquipFormCustomerId(e.target.value)}
+                options={customers.map(c => ({ value: c.id, label: c.name }))} 
+              />
               <FormSelect label="Fornecedor Vinculado" name="supplierId" options={[{ value: '', label: 'Nenhum' }, ...suppliers.map(s => ({ value: s.id, label: s.name }))]} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -837,7 +1195,7 @@ export default function App() {
       )}
 
       {isCustomerModalOpen && (
-        <Modal title="Nova Unidade de Saúde" onClose={() => setIsCustomerModalOpen(false)}>
+        <Modal title="Nova Empresa / Unidade de Saúde" onClose={() => { setIsCustomerModalOpen(false); setNewCustomerEquipPhoto(null); }}>
           <form onSubmit={handleAddCustomer} className="space-y-6">
             <FormInput label="Razão Social / Nome" name="name" required />
             <FormInput label="CNPJ / CPF" name="taxId" required />
@@ -846,7 +1204,69 @@ export default function App() {
               <FormInput label="E-mail" name="email" type="email" />
             </div>
             <FormTextArea label="Endereço" name="address" />
-            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-xl">Confirmar Unidade</button>
+
+            {/* Seção Equipamento Inicial */}
+            <div className="pt-6 border-t border-slate-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <HardDrive size={16} className="text-red-500" />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-700">Equipamento Inicial (Opcional)</h4>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">Cadastre o primeiro equipamento diretamente com a empresa, incluindo a foto para agilizar o login do ativo no sistema.</p>
+
+              <FormInput label="Nome do Equipamento" name="equipName" placeholder="Ex: Monitor Multiparamétrico" />
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput label="Marca do Equipamento" name="equipBrand" placeholder="Ex: Philips" />
+                <FormInput label="Nº de Série" name="equipSerial" placeholder="Ex: SN-928374" />
+              </div>
+
+              {/* Upload de Imagem do Equipamento */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Imagem do Equipamento</label>
+                <div 
+                  onClick={() => document.getElementById('new-customer-equip-photo-input')?.click()}
+                  className="w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 hover:border-red-300 transition-all cursor-pointer group relative overflow-hidden shadow-inner font-inter"
+                >
+                  {newCustomerEquipPhoto ? (
+                    <img src={newCustomerEquipPhoto} alt="Equipamento" className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
+                  ) : (
+                    <>
+                      <div className="p-3 bg-white rounded-2xl text-slate-400 group-hover:text-red-500 shadow-md transition-all group-hover:scale-105">
+                        <Upload size={20} />
+                      </div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Enviar foto do equipamento</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    id="new-customer-equip-photo-input" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const base64 = await fileToBase64(file);
+                          setNewCustomerEquipPhoto(base64);
+                        } catch (err) {
+                          console.error('Error uploading initial equip photo:', err);
+                        }
+                      }
+                    }} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
+                </div>
+                {newCustomerEquipPhoto && (
+                  <button 
+                    type="button" 
+                    onClick={() => setNewCustomerEquipPhoto(null)}
+                    className="flex items-center gap-1.5 text-[9px] font-black text-red-500 uppercase tracking-widest mt-1 hover:opacity-75 transition-all"
+                  >
+                    <Trash2 size={12} /> Remover Imagem
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-xl">Confirmar Cadastro</button>
           </form>
         </Modal>
       )}
@@ -932,12 +1352,12 @@ function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) 
   return (
     <button 
       onClick={() => onClick(id)} 
-      className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all relative group ${active ? 'bg-white text-[#005ca9] shadow-xl shadow-blue-900/20' : color || 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
+      className={`w-full py-3 px-2 lg:px-4 flex flex-col lg:flex-row items-center lg:justify-start gap-1.5 lg:gap-3 rounded-2xl transition-all relative group ${active ? 'bg-white text-[#005ca9] shadow-xl shadow-blue-900/20' : color || 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
     >
-      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-      <div className="absolute left-20 bg-slate-800 text-white text-[9px] font-black uppercase px-2 py-1 rounded opacity-0 lg:group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100] tracking-widest shadow-xl">
-         {label}
-      </div>
+      <Icon size={18} strokeWidth={active ? 2.5 : 2} className="shrink-0" />
+      <span className="text-[9px] lg:text-xs font-black uppercase tracking-wider text-center lg:text-left truncate w-full max-w-full leading-tight">
+        {label}
+      </span>
     </button>
   );
 }

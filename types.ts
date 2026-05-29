@@ -77,6 +77,7 @@ export interface Equipment {
   serviceRecords: ServiceRecord[];
   attachments?: Attachment[];
   photoUrl?: string;
+  technicalReport?: string;
 }
 
 export type EntityType = 'equipment' | 'customer' | 'supplier' | 'user';

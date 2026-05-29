@@ -8,7 +8,7 @@ import {
   LogOut, X, History, ArrowRight,
   Sparkles, RefreshCw, MapPin, Phone, Mail,
   Download, Briefcase, Factory, Settings,
-  Upload, Trash2, Image as ImageIcon
+  Upload, Trash2, Image as ImageIcon, Paperclip
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
@@ -85,6 +85,7 @@ export default function App() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [isEquipHistoryModalOpen, setIsEquipHistoryModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
@@ -98,7 +99,9 @@ export default function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedCompanyEquipId, setSelectedCompanyEquipId] = useState<string | null>(null);
   const [newCustomerEquipPhoto, setNewCustomerEquipPhoto] = useState<string | null>(null);
+  const [newCustomerEquipAttachments, setNewCustomerEquipAttachments] = useState<Attachment[]>([]);
   const [newEquipPhoto, setNewEquipPhoto] = useState<string | null>(null);
+  const [newEquipAttachments, setNewEquipAttachments] = useState<Attachment[]>([]);
   const [equipFormCustomerId, setKeepEquipFormCustomerId] = useState<string>('');
 
   const openEquipModal = (companyId?: string) => {
@@ -290,11 +293,13 @@ export default function App() {
       customerId: fd.get('customerId') as string, 
       supplierId: fd.get('supplierId') as string,
       serviceRecords: [],
-      attachments: [],
-      photoUrl: newEquipPhoto || undefined
+      attachments: newEquipAttachments,
+      photoUrl: newEquipPhoto || undefined,
+      technicalReport: (fd.get('technicalReport') as string) || ''
     };
     setEquipments([newItem, ...equipments]);
     setNewEquipPhoto(null);
+    setNewEquipAttachments([]);
     setIsEquipModalOpen(false);
   };
 
@@ -329,13 +334,15 @@ export default function App() {
         customerId: newCustId,
         supplierId: '',
         serviceRecords: [],
-        attachments: [],
-        photoUrl: newCustomerEquipPhoto || undefined
+        attachments: newCustomerEquipAttachments,
+        photoUrl: newCustomerEquipPhoto || undefined,
+        technicalReport: (fd.get('equipTechnicalReport') as string) || ''
       };
       setEquipments(prev => [newEquip, ...prev]);
     }
 
     setNewCustomerEquipPhoto(null);
+    setNewCustomerEquipAttachments([]);
     setSelectedCompanyId(newCustId); // Auto-select the newly created company
     setIsCustomerModalOpen(false);
   };
@@ -528,14 +535,36 @@ export default function App() {
                           >
                             <Wrench size={18} />
                           </button>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800 truncate">{service.equipName}</p>
+                          <div 
+                            onClick={() => {
+                              const equip = equipments.find(e => e.id === service.equipmentId);
+                              if (equip) {
+                                setSelectedEquipment(equip);
+                                setIsEquipHistoryModalOpen(true);
+                              }
+                            }}
+                            className="flex-1 min-w-0 cursor-pointer group/item hover:opacity-85 transition-opacity"
+                            title="Ver histórico e empresa vinculada"
+                          >
+                            <p className="text-xs font-black text-slate-800 group-hover/item:text-red-600 transition-colors truncate">{service.equipName}</p>
                             <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-slate-500 font-mono truncate">{service.equipCode}</p>
+                              <p className="text-[10px] text-slate-500 font-mono font-black truncate">{service.equipCode}</p>
                               <span className="text-[9px] font-black text-blue-500 uppercase px-1.5 py-0.5 bg-blue-50 rounded italic">{service.serviceType}</span>
                             </div>
                           </div>
-                          <div className="hidden lg:block flex-1 text-center italic text-slate-400 text-[11px] truncate px-4">"{service.description}"</div>
+                          <div 
+                            onClick={() => {
+                              const equip = equipments.find(e => e.id === service.equipmentId);
+                              if (equip) {
+                                setSelectedEquipment(equip);
+                                setIsEquipHistoryModalOpen(true);
+                              }
+                            }}
+                            className="hidden lg:block flex-1 text-center italic text-slate-400 text-[11px] truncate px-4 cursor-pointer hover:text-slate-600 transition-colors"
+                            title="Ver histórico e empresa vinculada"
+                          >
+                            "{service.description}"
+                          </div>
                           <div className="text-right flex items-center gap-4">
                             <div className="flex flex-col items-end">
                               <p className="text-[10px] font-black text-slate-400 uppercase">{formatDate(service.date)}</p>
@@ -605,6 +634,14 @@ export default function App() {
                             <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Última Manutenção</span>
                             <span className="text-[11px] font-bold text-slate-700">{getLastMaintenanceInfo(equip).date}</span>
                           </div>
+                          {equip.technicalReport && (
+                            <div className="mt-2 pt-2 border-t border-slate-200">
+                              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Parecer Técnico</span>
+                              <p className="text-[10px] text-slate-700 italic font-medium leading-relaxed bg-white p-2.5 rounded-lg border border-slate-100 line-clamp-3">
+                                "{equip.technicalReport}"
+                              </p>
+                            </div>
+                          )}
                           <AttachmentList attachments={equip.attachments} />
                         </div>
                         <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all">
@@ -887,6 +924,38 @@ export default function App() {
                                         </div>
                                       </div>
                                     </div>
+
+                                    {/* Parecer Técnico do Equipamento */}
+                                    <div className="p-5 rounded-[24px] border border-dashed border-red-200 bg-red-50/20 space-y-3">
+                                      <div className="flex items-center gap-2">
+                                        <FileText size={16} className="text-red-600" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Parecer Técnico Oficial</p>
+                                      </div>
+                                      <p className="text-xs text-slate-700 leading-relaxed font-semibold italic bg-white p-3 rounded-xl border border-slate-100">
+                                        {selectedEquip.technicalReport || "Nenhum parecer técnico cadastrado."}
+                                      </p>
+                                    </div>
+
+                                    {/* Documentos e Anexos do Equipamento */}
+                                    <div className="p-5 rounded-[24px] border border-slate-100 bg-slate-50/50 space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Paperclip size={16} className="text-slate-500" />
+                                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Documentos / Anexos</p>
+                                        </div>
+                                        <button 
+                                          onClick={() => { setSelectedEquipment(selectedEquip); setIsAttachmentModalOpen(true); }}
+                                          className="text-[9px] font-black text-red-600 uppercase tracking-widest hover:underline"
+                                        >
+                                          Gerenciar Anexos
+                                        </button>
+                                      </div>
+                                      {selectedEquip.attachments && selectedEquip.attachments.length > 0 ? (
+                                        <AttachmentList attachments={selectedEquip.attachments} />
+                                      ) : (
+                                        <p className="text-[10px] text-slate-400 italic font-medium">Nenhum anexo adicional (PDF/Equipamento).</p>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -1107,7 +1176,7 @@ export default function App() {
       )}
 
       {isEquipModalOpen && (
-        <Modal title="Novo Equipamento" onClose={() => { setIsEquipModalOpen(false); setNewEquipPhoto(null); }}>
+        <Modal title="Novo Equipamento" onClose={() => { setIsEquipModalOpen(false); setNewEquipPhoto(null); setNewEquipAttachments([]); }}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
             <FormInput label="Equipamento" name="name" placeholder="Ex: Monitor de Sinais Vitais" required />
              <div className="grid grid-cols-2 gap-4">
@@ -1172,6 +1241,17 @@ export default function App() {
                 </button>
               )}
             </div>
+
+            {/* Parecer Técnico */}
+            <FormTextArea label="Parecer Técnico" name="technicalReport" placeholder="Digite o parecer técnico oficial para este equipamento..." />
+
+            {/* Upload de Anexos do Equipamento (PDF ou Imagens) */}
+            <FileUploader 
+              label="Anexos do Equipamento (PDF ou Imagem)"
+              attachments={newEquipAttachments} 
+              onUpload={(newAtts) => setNewEquipAttachments([...newEquipAttachments, ...newAtts])}
+              onRemove={(id) => setNewEquipAttachments(newEquipAttachments.filter(a => a.id !== id))}
+            />
 
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Cadastrar Equipamento</button>
           </form>
@@ -1313,6 +1393,17 @@ export default function App() {
                   </button>
                 )}
               </div>
+
+              {/* Parecer Técnico do Equipamento Inicial */}
+              <FormTextArea label="Parecer Técnico" name="equipTechnicalReport" placeholder="Digite o parecer técnico oficial inicial para este equipamento..." />
+
+              {/* Anexos Adicionais (PDF ou Imagem) do Equipamento Inicial */}
+              <FileUploader 
+                label="Anexos do Equipamento (PDF ou Imagem)"
+                attachments={newCustomerEquipAttachments} 
+                onUpload={(newAtts) => setNewCustomerEquipAttachments([...newCustomerEquipAttachments, ...newAtts])}
+                onRemove={(id) => setNewCustomerEquipAttachments(newCustomerEquipAttachments.filter(a => a.id !== id))}
+              />
             </div>
 
             <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-xl">Confirmar Cadastro</button>
@@ -1368,6 +1459,125 @@ export default function App() {
 
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Salvar Manutenção</button>
           </form>
+        </Modal>
+      )}
+
+      {isEquipHistoryModalOpen && selectedEquipment && (
+        <Modal 
+          title={`Histórico e Vínculo do Ativo: ${selectedEquipment.name}`} 
+          onClose={() => setIsEquipHistoryModalOpen(false)}
+          className="max-w-4xl"
+        >
+          <div className="space-y-6">
+            {/* Secao 1: Cartão de Ativo */}
+            <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 flex flex-col md:flex-row gap-6 items-center justify-between">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                  <HardDrive size={28} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-400 font-mono font-bold uppercase">{selectedEquipment.code}</p>
+                  <h4 className="text-md md:text-lg font-black text-slate-800 uppercase tracking-tight truncate">{selectedEquipment.name}</h4>
+                  <p className="text-[10px] text-slate-500 font-medium">S/N: {selectedEquipment.serialNumber} • Marca: {selectedEquipment.brand} • Modelo: {selectedEquipment.model || 'N/A'}</p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2">
+                <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${getStatusBadge(selectedEquipment.status as EquipmentStatus)}`}>
+                  {selectedEquipment.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Secao 2: Empresa Vinculada */}
+            {(() => {
+              const company = customers.find(c => c.id === selectedEquipment.customerId);
+              return (
+                <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="text-red-500" size={16} />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-700">Empresa Vinculada (Unidade de Saúde)</h4>
+                  </div>
+                  {company ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-slate-50">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome / Razão Social</span>
+                        <span className="text-xs text-slate-800 font-black uppercase tracking-tight">{company.name}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CNPJ / CPF</span>
+                        <span className="text-xs text-slate-700 font-mono font-bold">{company.taxId}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contato</span>
+                        <span className="text-xs text-slate-700 font-medium truncate">{company.phone || company.email || 'Não informado'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-amber-600 font-semibold italic">Este equipamento não está vinculado a nenhuma empresa cadastrada.</div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Secao 3: Historico Completo de Manutencoes */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                <History className="text-blue-500" size={16} />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-700">Histórico Completo de Manutenções ({selectedEquipment.serviceRecords?.length || 0})</h4>
+              </div>
+              
+              <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                {selectedEquipment.serviceRecords && selectedEquipment.serviceRecords.length > 0 ? (
+                  selectedEquipment.serviceRecords.map((record, index) => (
+                    <div key={record.id || index} className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col gap-4 relative hover:border-slate-300 transition-colors">
+                      <div className="flex justify-between items-center flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-black">{selectedEquipment.serviceRecords.length - index}</span>
+                          <span className="text-[9px] font-black text-blue-500 uppercase px-2.5 py-0.5 bg-blue-50 rounded italic border border-blue-100">{record.serviceType}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 font-mono">{formatDate(record.date)}</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-50/80 pt-3">
+                        <div>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">Descrição do Problema</p>
+                          <p className="text-xs text-slate-700 font-medium leading-relaxed italic">"{record.description}"</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">Resolução do Técnico</p>
+                          <p className="text-xs text-slate-800 font-semibold leading-relaxed">"{record.resolution}"</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-slate-50/80 pt-3 flex-wrap gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Situação:</span>
+                          {record.isResolved ? (
+                            <span className="text-[9px] font-black text-emerald-600 uppercase flex items-center gap-1 px-2 py-0.5 bg-green-50 rounded-full border border-green-100"><CheckCircle2 size={12} /> Resolvido</span>
+                          ) : (
+                            <span className="text-[9px] font-black text-amber-600 uppercase flex items-center gap-1 px-2 py-0.5 bg-amber-50 rounded-full border border-amber-100"><AlertCircle size={12} /> Pendente</span>
+                          )}
+                        </div>
+
+                        {/* Record attachments */}
+                        {record.attachments && record.attachments.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1"><Paperclip size={10} /> Anexos do Serviço:</span>
+                            <AttachmentList attachments={record.attachments} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <History className="mx-auto text-slate-300 mb-2" size={24} />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum registro de manutenção encontrado para este ativo.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </Modal>
       )}
 

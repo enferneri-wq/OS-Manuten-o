@@ -98,6 +98,7 @@ export default function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedCompanyEquipId, setSelectedCompanyEquipId] = useState<string | null>(null);
   const [newCustomerEquipPhoto, setNewCustomerEquipPhoto] = useState<string | null>(null);
+  const [newEquipPhoto, setNewEquipPhoto] = useState<string | null>(null);
   const [equipFormCustomerId, setKeepEquipFormCustomerId] = useState<string>('');
 
   const openEquipModal = (companyId?: string) => {
@@ -289,9 +290,11 @@ export default function App() {
       customerId: fd.get('customerId') as string, 
       supplierId: fd.get('supplierId') as string,
       serviceRecords: [],
-      attachments: []
+      attachments: [],
+      photoUrl: newEquipPhoto || undefined
     };
     setEquipments([newItem, ...equipments]);
+    setNewEquipPhoto(null);
     setIsEquipModalOpen(false);
   };
 
@@ -1104,7 +1107,7 @@ export default function App() {
       )}
 
       {isEquipModalOpen && (
-        <Modal title="Novo Equipamento" onClose={() => setIsEquipModalOpen(false)}>
+        <Modal title="Novo Equipamento" onClose={() => { setIsEquipModalOpen(false); setNewEquipPhoto(null); }}>
           <form onSubmit={handleAddEquipment} className="space-y-6">
             <FormInput label="Equipamento" name="name" placeholder="Ex: Monitor de Sinais Vitais" required />
              <div className="grid grid-cols-2 gap-4">
@@ -1124,6 +1127,52 @@ export default function App() {
             <FormInput label="Nº de Série" name="serialNumber" placeholder="SN-827364" required />
             <FormTextArea label="Observações de Entrada" name="observations" placeholder="Estado inicial..." />
             
+            {/* Upload de Imagem do Equipamento */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Imagem do Equipamento (Foto)</label>
+              <div 
+                onClick={() => document.getElementById('new-standalone-equip-photo-input')?.click()}
+                className="w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 hover:border-blue-500 transition-all cursor-pointer group relative overflow-hidden shadow-inner font-inter"
+              >
+                {newEquipPhoto ? (
+                  <img src={newEquipPhoto} alt="Equipamento" className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
+                ) : (
+                  <>
+                    <div className="p-3 bg-white rounded-2xl text-slate-400 group-hover:text-blue-500 shadow-md transition-all group-hover:scale-105">
+                      <ImageIcon size={20} />
+                    </div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Enviar foto do equipamento</span>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  id="new-standalone-equip-photo-input" 
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const base64 = await fileToBase64(file);
+                        setNewEquipPhoto(base64);
+                      } catch (err) {
+                        console.error('Error uploading standalone equip photo:', err);
+                      }
+                    }
+                  }} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+              </div>
+              {newEquipPhoto && (
+                <button 
+                  type="button" 
+                  onClick={() => setNewEquipPhoto(null)}
+                  className="flex items-center gap-1.5 text-[9px] font-black text-red-500 uppercase tracking-widest mt-1 hover:opacity-75 transition-all"
+                >
+                  <Trash2 size={12} /> Remover Imagem
+                </button>
+              )}
+            </div>
+
             <button type="submit" className="w-full py-5 bg-slate-800 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl">Cadastrar Equipamento</button>
           </form>
         </Modal>

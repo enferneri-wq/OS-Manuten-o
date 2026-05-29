@@ -8,7 +8,8 @@ import {
   LogOut, X, History, ArrowRight,
   Sparkles, RefreshCw, MapPin, Phone, Mail,
   Download, Briefcase, Factory, Settings,
-  Upload, Trash2, Image as ImageIcon, Paperclip
+  Upload, Trash2, Image as ImageIcon, Paperclip,
+  Lock, User as UserIcon, Shield
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
@@ -16,7 +17,7 @@ import {
 } from 'recharts';
 import { 
   Equipment, Customer, EquipmentStatus, 
-  ServiceRecord, Supplier, Attachment 
+  ServiceRecord, Supplier, Attachment, User, UserRole 
 } from './types.ts';
 import { generateUniqueCode, generateUUID, formatDate, fileToBase64 } from './utils.ts';
 import { 
@@ -67,6 +68,7 @@ const Logo = ({ config, className = "h-12" }: { config: BrandConfig, className?:
 };
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'equipment' | 'customers' | 'suppliers'>('dashboard');
   const [brandConfig, setBrandConfig] = useState<BrandConfig>({
     name: 'ALVS',
@@ -166,6 +168,7 @@ export default function App() {
     const savedCust = localStorage.getItem(STORAGE_KEY_CUST);
     const savedSupp = localStorage.getItem(STORAGE_KEY_SUPP);
     const savedBrand = localStorage.getItem(STORAGE_KEY_BRAND);
+    const savedUser = localStorage.getItem('alvs_user');
     
     if (savedEquip) setEquipments(JSON.parse(savedEquip));
     if (savedCust) setCustomers(JSON.parse(savedCust));
@@ -175,6 +178,14 @@ export default function App() {
       setBrandConfig(parsedBrand);
       setLogoPreview(parsedBrand.logoUrl);
     }
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('alvs_user');
+    setUser(null);
   };
 
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>, equipId: string) => {
@@ -433,10 +444,26 @@ export default function App() {
     }
   };
 
+  if (!user) {
+    return (
+      <LoginScreen 
+        onLogin={(loggedInUser) => {
+          localStorage.setItem('alvs_user', JSON.stringify(loggedInUser));
+          setUser(loggedInUser);
+        }} 
+        brandConfig={brandConfig} 
+      />
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-inter text-slate-900">
+    <div className="flex h-screen bg-slate-950 overflow-hidden font-inter text-slate-100 relative">
+      {/* Background visuals */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-red-600/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
+
       {/* Sidebar Desktop */}
-      <aside className="hidden md:flex w-24 lg:w-48 bg-[#005ca9] border-r border-blue-400/20 flex-col py-8 z-50 transition-all shadow-xl">
+      <aside className="hidden md:flex w-24 lg:w-48 bg-slate-950 border-r border-slate-850 flex-col py-8 z-50 transition-all shadow-2xl relative">
         <div className="mb-10 px-4 w-full h-24 flex items-center justify-center">
           <Logo config={brandConfig} className="w-full" />
         </div>
@@ -447,43 +474,50 @@ export default function App() {
           <SidebarIcon icon={Briefcase} label="Fornecedores" id="suppliers" activeTab={activeTab} onClick={setActiveTab} />
         </nav>
         <div className="w-full px-3 mt-auto flex flex-col gap-3">
-          <SidebarIcon icon={Settings} label="Marca" id="brand" activeTab="" onClick={() => { setLogoPreview(brandConfig.logoUrl); setIsBrandModalOpen(true); }} color="text-blue-200 hover:text-white" />
-          <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={() => {}} color="text-blue-200 hover:text-red-200" />
+          <SidebarIcon icon={Settings} label="Marca" id="brand" activeTab="" onClick={() => { setLogoPreview(brandConfig.logoUrl); setIsBrandModalOpen(true); }} color="text-slate-400 hover:text-white" />
+          <SidebarIcon icon={LogOut} label="Sair" id="logout" activeTab="" onClick={handleLogout} color="text-slate-400 hover:text-red-400" />
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-20 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-20 md:pb-0 relative z-10">
         {/* Header */}
-        <header className="h-20 bg-[#005ca9] border-b border-blue-400/20 px-6 md:px-8 flex items-center justify-between z-30 shrink-0 shadow-md">
+        <header className="h-20 bg-slate-950 border-b border-slate-850 px-6 md:px-8 flex items-center justify-between z-30 shrink-0 shadow-xl">
           <div className="flex items-center gap-4">
             <div className="md:hidden">
               <Logo config={brandConfig} className="h-10" />
             </div>
             <div className="hidden sm:block">
                <h1 className="text-sm font-black text-white uppercase tracking-tight leading-none">{getPageTitle()}</h1>
-               <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{brandConfig.name} Clinical Intel</p>
+               <p className="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest">{brandConfig.name} Clinical Intel</p>
             </div>
           </div>
 
           <div className="flex-1 max-w-lg mx-8 hidden lg:block">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-100" size={16} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
               <input 
                 type="text" 
                 placeholder={`Pesquisar equipamentos, clientes ou serviços...`} 
-                className="w-full pl-10 pr-4 py-2.5 bg-white/10 rounded-2xl text-xs border-transparent focus:bg-white/20 text-white placeholder:text-blue-100 outline-none transition-all border-2 focus:border-white/30"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-900/60 rounded-2xl text-xs border-slate-800 text-white placeholder:text-slate-600 outline-none transition-all border-2 focus:border-red-500/50"
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col items-end mr-4">
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">{ALVS_CNPJ}</span>
-              <span className="text-[9px] font-bold text-blue-100 uppercase">Sistema de Gestão</span>
+            <div className="hidden sm:flex flex-col items-end text-end mr-2">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">{user?.name || 'Administrador'}</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase">{user?.email || 'admin@alvs.com'}</span>
             </div>
-            <button onClick={syncData} className="p-2.5 text-blue-100 hover:text-white transition-all bg-white/10 border border-white/10 rounded-xl hover:shadow-md">
+            <button onClick={syncData} title="Sincronizar dados" className="p-2.5 text-slate-400 hover:text-white transition-all bg-slate-900 border border-slate-800 rounded-xl hover:shadow-md">
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <button 
+              onClick={handleLogout} 
+              title="Sair do sistema" 
+              className="p-2.5 text-slate-400 hover:text-red-400 transition-all bg-slate-900 border border-slate-800 rounded-xl hover:shadow-md"
+            >
+              <LogOut size={18} />
             </button>
           </div>
         </header>
@@ -509,19 +543,19 @@ export default function App() {
                     </div>
                     <button 
                       onClick={() => generateGlobalReport(equipments, customers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
-                      className="w-full md:w-auto px-6 py-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm group"
+                      className="w-full md:w-auto px-6 py-4 bg-slate-900 border border-slate-800/85 rounded-2xl flex items-center justify-center gap-3 text-slate-200 font-black uppercase text-[10px] tracking-widest hover:bg-slate-850/80 hover:text-white transition-all shadow-sm group cursor-pointer"
                     >
                       <Download size={18} className="text-red-500" /> Relatório Consolidado
                     </button>
                   </div>
 
-                  <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                  <div className="bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800/80 shadow-2xl">
                     <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-8">
-                      <History size={14} className="text-blue-500" /> Fluxo de Manutenções
+                      <History size={14} className="text-red-500" /> Fluxo de Manutenções
                     </h3>
                     <div className="space-y-4">
                       {filteredServices.map((service) => (
-                        <div key={service.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100 group">
+                        <div key={service.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-950/60 transition-all border border-transparent hover:border-slate-850 group">
                           <button 
                             onClick={() => {
                               const equip = equipments.find(e => e.id === service.equipmentId);
@@ -530,7 +564,7 @@ export default function App() {
                                 setIsServiceModalOpen(true);
                               }
                             }}
-                            className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                            className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center text-red-500 shrink-0 hover:bg-red-650 hover:text-white transition-all shadow-sm border border-slate-850"
                             title="Nova Manutenção"
                           >
                             <Wrench size={18} />
@@ -546,10 +580,10 @@ export default function App() {
                             className="flex-1 min-w-0 cursor-pointer group/item hover:opacity-85 transition-opacity"
                             title="Ver histórico e empresa vinculada"
                           >
-                            <p className="text-xs font-black text-slate-800 group-hover/item:text-red-600 transition-colors truncate">{service.equipName}</p>
-                            <div className="flex items-center gap-2">
+                            <p className="text-xs font-black text-slate-200 group-hover/item:text-red-500 transition-colors truncate">{service.equipName}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
                               <p className="text-[10px] text-slate-500 font-mono font-black truncate">{service.equipCode}</p>
-                              <span className="text-[9px] font-black text-blue-500 uppercase px-1.5 py-0.5 bg-blue-50 rounded italic">{service.serviceType}</span>
+                              <span className="text-[9px] font-black text-red-500 uppercase px-1.5 py-0.5 bg-red-500/10 border border-red-500/20 rounded italic">{service.serviceType}</span>
                             </div>
                           </div>
                           <div 
@@ -560,23 +594,23 @@ export default function App() {
                                 setIsEquipHistoryModalOpen(true);
                               }
                             }}
-                            className="hidden lg:block flex-1 text-center italic text-slate-400 text-[11px] truncate px-4 cursor-pointer hover:text-slate-600 transition-colors"
+                            className="hidden lg:block flex-1 text-center italic text-slate-400 text-[11px] truncate px-4 cursor-pointer hover:text-slate-200 transition-colors"
                             title="Ver histórico e empresa vinculada"
                           >
                             "{service.description}"
                           </div>
                           <div className="text-right flex items-center gap-4">
                             <div className="flex flex-col items-end">
-                              <p className="text-[10px] font-black text-slate-400 uppercase">{formatDate(service.date)}</p>
+                              <p className="text-[10px] font-black text-slate-500 uppercase">{formatDate(service.date)}</p>
                               {(service as any).isResolved ? (
-                                <span className="text-[8px] font-black text-emerald-500 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> Resolvido</span>
+                                <span className="text-[8px] font-black text-emerald-400 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> Resolvido</span>
                               ) : (
                                 <span className="text-[8px] font-black text-amber-500 uppercase flex items-center gap-1"><AlertCircle size={10} /> Pendente</span>
                               )}
                             </div>
                             <button 
                               onClick={() => generateServiceOrderReport(service as any, equipments.find(e => e.id === service.equipmentId)!, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
-                              className="p-2 bg-white text-slate-400 hover:text-blue-600 rounded-lg shadow-sm border border-slate-100 transition-all opacity-0 group-hover:opacity-100"
+                              className="p-2 bg-slate-950 text-slate-500 hover:text-red-500 rounded-lg shadow-sm border border-slate-800 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                             ><Download size={14} /></button>
                           </div>
                         </div>
@@ -588,19 +622,19 @@ export default function App() {
 
               {activeTab === 'equipment' && (
                 <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800/80 shadow-2xl gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Gestão de Ativos</h3>
-                      <p className="text-xs text-slate-400 font-medium tracking-wide">Inventário completo de equipamentos médicos</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">Gestão de Ativos</h3>
+                      <p className="text-xs text-slate-550 font-medium tracking-wide">Inventário completo de equipamentos médicos</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                       <button 
                         onClick={() => generateGlobalReport(equipments, customers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
-                        className="px-6 py-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                        className="px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center gap-3 text-slate-200 font-black uppercase text-[10px] tracking-widest hover:bg-slate-850 hover:text-white transition-all shadow-md cursor-pointer"
                       >
                         <Download size={18} className="text-red-500" /> Exportar Inventário
                       </button>
-                      <button onClick={() => openEquipModal()} className="bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
+                      <button onClick={() => openEquipModal()} className="bg-red-650 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-750 transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95 cursor-pointer">
                         <Plus size={20} /> Novo Registro
                       </button>
                     </div>
@@ -608,44 +642,46 @@ export default function App() {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredEquipments.map(equip => (
-                      <div key={equip.id} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-2xl transition-all group flex flex-col">
+                      <div key={equip.id} className="bg-slate-900/60 backdrop-blur-md p-6 rounded-[32px] border border-slate-800 shadow-xl hover:shadow-2xl hover:border-slate-700/60 transition-all group flex flex-col relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-2xl pointer-events-none" />
                         <div className="flex justify-between items-start mb-6">
                           <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${getStatusBadge(equip.status as EquipmentStatus)}`}>
                             {equip.status}
                           </span>
                           <div className="flex gap-2">
-                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Manutenção"><Wrench size={16} /></button>
-                            <button onClick={() => { setSelectedEquipment(equip); setIsAttachmentModalOpen(true); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Anexos"><Upload size={16} /></button>
-                            <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '', ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)} className="p-2 text-slate-400 bg-slate-50 rounded-lg hover:bg-slate-200 transition-all shadow-sm" title="Relatório"><FileText size={16} /></button>
+                            <button onClick={() => { setSelectedEquipment(equip); setIsServiceModalOpen(true); }} className="p-2 text-red-500 bg-slate-950 rounded-lg hover:bg-red-650 hover:text-white transition-all border border-slate-850 shadow-sm cursor-pointer" title="Manutenção"><Wrench size={16} /></button>
+                            <button onClick={() => { setSelectedEquipment(equip); setIsAttachmentModalOpen(true); }} className="p-2 text-blue-400 bg-slate-950 rounded-lg hover:bg-blue-600 hover:text-white transition-all border border-slate-850 shadow-sm cursor-pointer" title="Anexos"><Upload size={16} /></button>
+                            <button onClick={() => generateEquipmentReport(equip, customers.find(c => c.id === equip.customerId)?.name || '', ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)} className="p-2 text-slate-400 bg-slate-950 rounded-lg hover:bg-slate-800 transition-all border border-slate-850 shadow-sm cursor-pointer" title="Relatório"><FileText size={16} /></button>
                           </div>
                         </div>
-                        <h4 className="text-md font-black text-slate-800 truncate">{equip.name}</h4>
-                        <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-6">{equip.code}</p>
-                        <div className="space-y-2 text-[11px] text-slate-600 bg-slate-50 p-4 rounded-xl mb-6 flex-1 border border-slate-100">
-                          <div className="flex items-center gap-2 truncate font-semibold"><Building2 size={12} className="text-blue-400 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
-                          <div className="flex items-center gap-2 truncate font-semibold"><HardDrive size={12} className="text-slate-400 shrink-0" /> S/N: {equip.serialNumber}</div>
+                        <h4 className="text-md font-black text-white truncate">{equip.name}</h4>
+                        <p className="text-[10px] text-slate-500 font-mono font-bold uppercase mb-6">{equip.code}</p>
+                        
+                        <div className="space-y-2 text-[11px] text-slate-350 bg-slate-950/60 p-4 rounded-xl mb-6 flex-1 border border-slate-850">
+                          <div className="flex items-center gap-2 truncate font-semibold"><Building2 size={12} className="text-red-500 shrink-0" /> {customers.find(c => c.id === equip.customerId)?.name}</div>
+                          <div className="flex items-center gap-2 truncate font-semibold"><HardDrive size={12} className="text-slate-500 shrink-0" /> S/N: {equip.serialNumber}</div>
                           {equip.serviceRecords && equip.serviceRecords.length > 0 ? (
-                            <div className="flex items-center gap-2 truncate font-bold text-blue-600">
-                              <Wrench size={12} className="shrink-0 text-blue-500" />
+                            <div className="flex items-center gap-2 truncate font-bold text-red-500">
+                              <Wrench size={12} className="shrink-0 text-red-500" />
                               <span>Último serviço: {equip.serviceRecords[0].serviceType}</span>
                             </div>
                           ) : null}
-                          <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-slate-200">
-                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Última Manutenção</span>
-                            <span className="text-[11px] font-bold text-slate-700">{getLastMaintenanceInfo(equip).date}</span>
+                          <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-slate-850">
+                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Última Manutenção</span>
+                            <span className="text-[11px] font-bold text-slate-300">{getLastMaintenanceInfo(equip).date}</span>
                           </div>
                           {equip.technicalReport && (
-                            <div className="mt-2 pt-2 border-t border-slate-200">
-                              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Parecer Técnico</span>
-                              <p className="text-[10px] text-slate-700 italic font-medium leading-relaxed bg-white p-2.5 rounded-lg border border-slate-100 line-clamp-3">
+                            <div className="mt-2 pt-2 border-t border-slate-850">
+                              <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Parecer Técnico</span>
+                              <p className="text-[10px] text-slate-400 italic font-medium leading-relaxed bg-slate-950 p-2.5 rounded-lg border border-slate-850 line-clamp-3">
                                 "{equip.technicalReport}"
                               </p>
                             </div>
                           )}
                           <AttachmentList attachments={equip.attachments} />
                         </div>
-                        <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all">
-                          <Sparkles size={12} /> Diagnóstico IA
+                        <button onClick={() => handleAiAdvice(equip)} className="mt-auto w-full py-3 bg-slate-950 text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-650 hover:text-white hover:border-red-500/50 transition-all border border-slate-850 cursor-pointer">
+                          <Sparkles size={12} className="text-red-500" /> Diagnóstico IA
                         </button>
                       </div>
                     ))}
@@ -656,19 +692,19 @@ export default function App() {
               {activeTab === 'customers' && (
                 <div className="space-y-8 animate-in fade-in duration-300">
                   {/* Top Bar */}
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800 shadow-2xl gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Cadastro de Empresas</h3>
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">Cadastro de Empresas</h3>
                       <p className="text-xs text-slate-400 font-medium tracking-wide">Gerenciamento de empresas parceiras, equipamentos vinculados e registros de manutenção</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                       <button 
                         onClick={() => generateCustomerListReport(customers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
-                        className="px-6 py-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                        className="px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center gap-3 text-slate-200 font-black uppercase text-[10px] tracking-widest hover:bg-slate-850 hover:text-white transition-all shadow-md cursor-pointer"
                       >
                         <Download size={18} className="text-red-500" /> Relatório de Empresas
                       </button>
-                      <button onClick={() => setIsCustomerModalOpen(true)} className="bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
+                      <button onClick={() => setIsCustomerModalOpen(true)} className="bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-750 transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95 cursor-pointer">
                         <Plus size={20} /> Nova Empresa
                       </button>
                     </div>
@@ -679,7 +715,7 @@ export default function App() {
                     {/* Column 1: Lista de Empresas */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2 px-1">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selecione uma Empresa ({filteredCustomers.length})</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Selecione uma Empresa ({filteredCustomers.length})</p>
                       </div>
                       <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                         {filteredCustomers.length > 0 ? (
@@ -692,35 +728,37 @@ export default function App() {
                                 onClick={() => setSelectedCompanyId(c.id)}
                                 className={`p-5 rounded-[24px] border transition-all cursor-pointer flex flex-col gap-3 group relative ${
                                   isActive 
-                                    ? 'bg-blue-50/50 border-blue-200 shadow-md scale-[1.01]' 
-                                    : 'bg-white border-slate-100 hover:border-slate-300'
+                                    ? 'bg-red-650/15 border-red-500/40 shadow-xl scale-[1.01]' 
+                                    : 'bg-slate-900/60 border-slate-850 hover:border-slate-800'
                                 }`}
                               >
                                 {isActive && (
-                                  <div className="absolute top-4 right-4 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                                  <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                                 )}
                                 <div className="flex items-center gap-3">
                                   <div className={`p-2.5 rounded-xl flex items-center justify-center transition-all ${
-                                    isActive ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-50 text-slate-500'
+                                    isActive ? 'bg-red-600 text-white shadow-md' : 'bg-slate-950 text-slate-500 border border-slate-850'
                                   }`}>
                                     <Building2 size={16} />
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-black text-slate-800 uppercase tracking-tight truncate leading-tight group-hover:text-blue-600">{c.name}</p>
-                                    <p className="text-[10px] font-bold font-mono text-slate-400 mt-0.5 truncate">{c.taxId}</p>
+                                    <p className={`text-xs font-black uppercase tracking-tight truncate leading-tight transition-all ${
+                                      isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'
+                                    }`}>{c.name}</p>
+                                    <p className="text-[10px] font-bold font-mono text-slate-500 mt-0.5 truncate">{c.taxId}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center justify-between pt-1 text-[10px] border-t border-slate-50">
+                                <div className="flex items-center justify-between pt-1 text-[10px] border-t border-slate-850">
                                   <span className="text-slate-500 font-medium font-inter">Ativos vinculados</span>
-                                  <span className="font-bold text-slate-700 bg-slate-50 px-2.5 py-0.5 rounded-full">{companyEquipsCount} {companyEquipsCount === 1 ? 'Ativo' : 'Ativos'}</span>
+                                  <span className="font-bold text-slate-300 bg-slate-950 px-2.5 py-0.5 rounded-full border border-slate-850">{companyEquipsCount} {companyEquipsCount === 1 ? 'Ativo' : 'Ativos'}</span>
                                 </div>
                               </div>
                             );
                           })
                         ) : (
-                          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
-                            <Building2 className="mx-auto text-slate-300 mb-2" size={24} />
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma empresa encontrada.</p>
+                          <div className="text-center py-12 bg-slate-900/60 rounded-2xl border border-dashed border-slate-800">
+                            <Building2 className="mx-auto text-slate-500 mb-2" size={24} />
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nenhuma empresa encontrada.</p>
                           </div>
                         )}
                       </div>
@@ -737,49 +775,49 @@ export default function App() {
                         return (
                           <div className="space-y-6">
                             {/* Card de Informações da Empresa */}
-                            <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-6">
+                            <div className="bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800 shadow-2xl flex flex-col gap-6">
                               <div className="flex justify-between items-start flex-wrap gap-4">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><Building2 size={28} /></div>
+                                  <div className="w-14 h-14 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl flex items-center justify-center shadow-inner"><Building2 size={28} /></div>
                                   <div>
-                                    <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none mb-2">{currentCompany.name}</h4>
-                                    <span className="bg-green-50 text-green-600 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-green-100">Parceiro Oficial</span>
+                                    <h4 className="text-lg font-black text-white uppercase tracking-tight leading-none mb-2">{currentCompany.name}</h4>
+                                    <span className="bg-red-500/10 text-red-400 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-red-500/20">Parceiro Oficial</span>
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={() => setViewingCustomer(currentCompany)} className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all">Ver Detalhes</button>
+                                  <button onClick={() => setViewingCustomer(currentCompany)} className="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all cursor-pointer">Ver Detalhes</button>
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-50 pt-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-850 pt-6">
                                 <div className="flex flex-col gap-1 min-w-0">
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CNPJ / CPF</span>
-                                  <span className="text-xs text-slate-700 font-mono font-bold truncate">{currentCompany.taxId}</span>
+                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">CNPJ / CPF</span>
+                                  <span className="text-xs text-slate-300 font-mono font-bold truncate">{currentCompany.taxId}</span>
                                 </div>
                                 <div className="flex flex-col gap-1 min-w-0">
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">E-mail de Contato</span>
-                                  <span className="text-xs text-slate-700 font-semibold truncate hover:text-blue-600 cursor-pointer">{currentCompany.email || 'Não informado'}</span>
+                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">E-mail de Contato</span>
+                                  <span className="text-xs text-slate-300 font-semibold truncate hover:text-red-405 cursor-pointer">{currentCompany.email || 'Não informado'}</span>
                                 </div>
                                 <div className="flex flex-col gap-1 min-w-0">
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone</span>
-                                  <span className="text-xs text-slate-700 font-semibold truncate">{currentCompany.phone || 'Não informado'}</span>
+                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Telefone</span>
+                                  <span className="text-xs text-slate-300 font-semibold truncate">{currentCompany.phone || 'Não informado'}</span>
                                 </div>
                               </div>
                             </div>
 
                             {/* Detalhes do Equipamento Vinculado */}
-                            <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+                            <div className="bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800 shadow-2xl space-y-6">
                               <div className="flex items-center justify-between flex-wrap gap-4">
                                 <div>
-                                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                                    <HardDrive size={16} className="text-blue-500" /> Informações do Equipamento
+                                  <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                    <HardDrive size={16} className="text-red-500" /> Informações do Equipamento
                                   </h4>
-                                  <p className="text-[10px] text-slate-400 font-semibold tracking-wide">Selecione para puxar as informações e a última manutenção direta do banco de dados</p>
+                                  <p className="text-[10px] text-slate-450 font-semibold tracking-wide">Selecione para puxar as informações e a última manutenção direta do banco de dados</p>
                                 </div>
                                 {companyEquipments.length > 0 && (
                                   <button 
                                     onClick={() => openEquipModal(currentCompany.id)}
-                                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-widest rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5"
+                                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-widest rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
                                   >
                                     <Plus size={14} /> Vincular Novo Equipamento
                                   </button>
@@ -787,12 +825,12 @@ export default function App() {
                               </div>
 
                               <div className="space-y-4">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Escolha o Equipamento Ativo</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Escolha o Equipamento Ativo</label>
                                 {companyEquipments.length > 0 ? (
                                   <select
                                     value={selectedCompanyEquipId || ""}
                                     onChange={(e) => setSelectedCompanyEquipId(e.target.value)}
-                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black font-mono text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer uppercase shadow-inner"
+                                    className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-black font-mono text-slate-300 outline-none focus:ring-1 focus:ring-red-500 transition-all cursor-pointer uppercase shadow-inner [&>option]:bg-slate-900 [&>option]:text-white"
                                   >
                                     {companyEquipments.map((eq) => (
                                       <option key={eq.id} value={eq.id}>
@@ -801,13 +839,13 @@ export default function App() {
                                     ))}
                                   </select>
                                 ) : (
-                                  <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
-                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Nenhum equipamento cadastrado para esta empresa.</p>
+                                  <div className="p-6 bg-slate-950 rounded-2xl border-2 border-dashed border-slate-850 text-center">
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-3">Nenhum equipamento cadastrado para esta empresa.</p>
                                     <button 
                                       onClick={() => {
                                         openEquipModal(currentCompany.id);
                                       }}
-                                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-750 transition-all cursor-pointer"
                                     >
                                       <Plus size={12} /> Vincular Equipamento agora
                                     </button>
@@ -816,11 +854,11 @@ export default function App() {
                               </div>
 
                               {selectedEquip && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-50">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-850">
                                   {/* Col 1: Foto e Botão de Envio de arquivos */}
                                   <div className="space-y-4">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Foto Oficial do Equipamento</p>
-                                    <div className="relative group rounded-[24px] overflow-hidden border border-slate-200 bg-slate-50 h-56 flex flex-col items-center justify-center shadow-inner transition-all hover:border-blue-300">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Oficial do Equipamento</p>
+                                    <div className="relative group rounded-[24px] overflow-hidden border border-slate-800 bg-slate-950 h-56 flex flex-col items-center justify-center shadow-inner transition-all hover:border-red-500/30">
                                       {selectedEquip.photoUrl ? (
                                         <img 
                                           src={selectedEquip.photoUrl} 
@@ -830,23 +868,23 @@ export default function App() {
                                         />
                                       ) : (
                                         <div className="text-center p-6 flex flex-col items-center gap-2">
-                                          <ImageIcon size={32} className="text-slate-300" />
-                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sem foto do ativo cadastrada</p>
+                                          <ImageIcon size={32} className="text-slate-600" />
+                                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sem foto do ativo cadastrada</p>
                                         </div>
                                       )}
                                       
                                       {/* Hover Overlay para Upload */}
-                                      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                                      <div className="absolute inset-0 bg-slate-950/85 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
                                         <button 
                                           onClick={() => {
                                             const fileInput = document.getElementById(`equip-photo-input-${selectedEquip.id}`) as HTMLInputElement;
                                             fileInput?.click();
                                           }} 
-                                          className="px-4 py-2.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg"
+                                          className="px-4 py-2.5 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                                         >
                                           <Upload size={12} /> Enviar Nova Foto
                                         </button>
-                                        <span className="text-[8px] text-blue-100 font-bold uppercase tracking-wider">Formatos aceitos: Imagens</span>
+                                        <span className="text-[8px] text-red-200 font-bold uppercase tracking-wider">Formatos aceitos: Imagens</span>
                                       </div>
                                       
                                       <input 
@@ -864,7 +902,7 @@ export default function App() {
                                         <a 
                                           href={selectedEquip.photoUrl}
                                           download={`Foto_${selectedEquip.code}.png`}
-                                          className="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest flex items-center gap-1 transition-all"
+                                          className="text-[9px] font-black text-red-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-1 transition-all"
                                         >
                                           <Download size={12} /> Baixar Imagem do Ativo
                                         </a>
@@ -889,14 +927,14 @@ export default function App() {
                                   {/* Col 2: Informações Técnicas e Última Manutenção */}
                                   <div className="space-y-6">
                                     <div className="space-y-4">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Especificações do Sistema</p>
-                                      <div className="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-100">
-                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Identificação:</span> <span className="font-bold text-slate-800 font-mono uppercase">{selectedEquip.code}</span></div>
-                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Nº de Série:</span> <span className="font-bold text-slate-800 font-mono">{selectedEquip.serialNumber}</span></div>
-                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Marca/Modelo:</span> <span className="font-bold text-slate-800 uppercase">{selectedEquip.brand} / {selectedEquip.model}</span></div>
-                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-400">Data de Entrada:</span> <span className="font-bold text-slate-800">{formatDate(selectedEquip.entryDate).split(',')[0]}</span></div>
-                                        <div className="flex justify-between text-xs font-medium items-center pt-2 border-t border-slate-200">
-                                          <span className="text-slate-400">Situação:</span> 
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Especificações do Sistema</p>
+                                      <div className="bg-slate-950 p-4 rounded-2xl space-y-2 border border-slate-850">
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Identificação:</span> <span className="font-bold text-white font-mono uppercase">{selectedEquip.code}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Nº de Série:</span> <span className="font-bold text-white font-mono">{selectedEquip.serialNumber}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Marca/Modelo:</span> <span className="font-bold text-white uppercase">{selectedEquip.brand} / {selectedEquip.model}</span></div>
+                                        <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Data de Entrada:</span> <span className="font-bold text-white">{formatDate(selectedEquip.entryDate).split(',')[0]}</span></div>
+                                        <div className="flex justify-between text-xs font-medium items-center pt-2 border-t border-slate-850">
+                                          <span className="text-slate-500">Situação:</span> 
                                           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${getStatusBadge(selectedEquip.status as EquipmentStatus)}`}>
                                             {selectedEquip.status}
                                           </span>
@@ -905,20 +943,20 @@ export default function App() {
                                     </div>
 
                                     {/* Última Manutenção */}
-                                    <div className="p-5 rounded-[24px] border border-dashed border-blue-200 bg-blue-50/20 space-y-3">
+                                    <div className="p-5 rounded-[24px] border border-dashed border-red-500/20 bg-red-500/5 space-y-3">
                                       <div className="flex items-center gap-2">
-                                        <Wrench size={16} className="text-[#005ca9]" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[#005ca9]">Última Manutenção Ativa</p>
+                                        <Wrench size={16} className="text-red-500" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Última Manutenção Ativa</p>
                                       </div>
                                       
                                       <div className="space-y-2">
                                         <div>
-                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Data da manutenção</span>
-                                          <p className="text-xs font-bold text-slate-800">{getLastMaintenanceInfo(selectedEquip).date}</p>
+                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Data da manutenção</span>
+                                          <p className="text-xs font-bold text-white">{getLastMaintenanceInfo(selectedEquip).date}</p>
                                         </div>
                                         <div>
-                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">O que foi feito / Resolução</span>
-                                          <p className="text-xs text-slate-600 leading-relaxed italic bg-white p-3 rounded-xl border border-slate-100 font-medium">
+                                          <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">O que foi feito / Resolução</span>
+                                          <p className="text-xs text-slate-300 leading-relaxed italic bg-slate-950 p-3 rounded-xl border border-slate-850 font-medium font-inter">
                                             "{getLastMaintenanceInfo(selectedEquip).details}"
                                           </p>
                                         </div>
@@ -926,18 +964,18 @@ export default function App() {
                                     </div>
 
                                     {/* Parecer Técnico do Equipamento */}
-                                    <div className="p-5 rounded-[24px] border border-dashed border-red-200 bg-red-50/20 space-y-3">
+                                    <div className="p-5 rounded-[24px] border border-dashed border-red-500/20 bg-red-500/5 space-y-3">
                                       <div className="flex items-center gap-2">
-                                        <FileText size={16} className="text-red-600" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Parecer Técnico Oficial</p>
+                                        <FileText size={16} className="text-red-500" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Parecer Técnico Oficial</p>
                                       </div>
-                                      <p className="text-xs text-slate-700 leading-relaxed font-semibold italic bg-white p-3 rounded-xl border border-slate-100">
+                                      <p className="text-xs text-slate-300 leading-relaxed font-semibold italic bg-slate-950 p-3 rounded-xl border border-slate-850 font-inter">
                                         {selectedEquip.technicalReport || "Nenhum parecer técnico cadastrado."}
                                       </p>
                                     </div>
 
                                     {/* Documentos e Anexos do Equipamento */}
-                                    <div className="p-5 rounded-[24px] border border-slate-100 bg-slate-50/50 space-y-3">
+                                    <div className="p-5 rounded-[24px] border border-slate-850 bg-slate-950/40 space-y-3">
                                       <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                           <Paperclip size={16} className="text-slate-500" />
@@ -953,7 +991,7 @@ export default function App() {
                                       {selectedEquip.attachments && selectedEquip.attachments.length > 0 ? (
                                         <AttachmentList attachments={selectedEquip.attachments} />
                                       ) : (
-                                        <p className="text-[10px] text-slate-400 italic font-medium">Nenhum anexo adicional (PDF/Equipamento).</p>
+                                        <p className="text-[10px] text-slate-500 italic font-medium">Nenhum anexo adicional (PDF/Equipamento).</p>
                                       )}
                                     </div>
                                   </div>
@@ -963,13 +1001,13 @@ export default function App() {
                           </div>
                         );
                       })() : (
-                        <div className="text-center py-24 bg-white rounded-[32px] border border-dashed border-slate-200 shadow-sm flex flex-col items-center justify-center gap-4">
-                          <Building2 size={48} className="text-slate-200" />
+                        <div className="text-center py-24 bg-slate-900/60 rounded-[32px] border border-dashed border-slate-800 shadow-xl flex flex-col items-center justify-center gap-4">
+                          <Building2 size={48} className="text-slate-500" />
                           <div>
-                            <p className="text-sm font-black text-slate-700 uppercase tracking-wider">Nenhuma Empresa Selecionada</p>
-                            <p className="text-xs text-slate-400 mt-1">Escolha uma empresa ao lado ou clique abaixo para cadastrar</p>
+                            <p className="text-sm font-black text-white uppercase tracking-wider">Nenhuma Empresa Selecionada</p>
+                            <p className="text-xs text-slate-550 mt-1">Escolha uma empresa ao lado ou clique abaixo para cadastrar</p>
                           </div>
-                          <button onClick={() => setIsCustomerModalOpen(true)} className="px-6 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg hover:shadow-red-500/10">
+                          <button onClick={() => setIsCustomerModalOpen(true)} className="px-6 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-750 transition-all flex items-center gap-2 shadow-lg hover:shadow-red-500/10 cursor-pointer">
                             <Plus size={14} /> Cadastrar Nova Empresa
                           </button>
                         </div>
@@ -981,41 +1019,41 @@ export default function App() {
 
               {activeTab === 'suppliers' && (
                 <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[32px] border border-slate-800 shadow-2xl gap-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Parceiros de Suprimentos</h3>
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">Parceiros de Suprimentos</h3>
                       <p className="text-xs text-slate-400 font-medium tracking-wide">Gestão de fornecedores de peças e serviços externos</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                       <button 
                         onClick={() => generateSupplierListReport(suppliers, ALVS_CNPJ, brandConfig.name, brandConfig.logoUrl)}
-                        className="px-6 py-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-700 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                        className="px-6 py-4 bg-slate-900 border border-slate-850 rounded-2xl flex items-center justify-center gap-3 text-slate-200 font-black uppercase text-[10px] tracking-widest hover:bg-slate-850 hover:text-white transition-all shadow-md cursor-pointer"
                       >
                         <Download size={18} className="text-red-500" /> Lista de Fornecedores
                       </button>
-                      <button onClick={() => setIsSupplierModalOpen(true)} className="bg-slate-800 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95">
+                      <button onClick={() => setIsSupplierModalOpen(true)} className="bg-red-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-red-700 transition-all text-xs font-black uppercase tracking-widest shadow-xl active:scale-95 cursor-pointer">
                         <Plus size={20} /> Novo Fornecedor
                       </button>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                      {filteredSuppliers.map(s => (
-                       <div key={s.id} className="p-6 md:p-8 bg-white rounded-[32px] border border-slate-100 hover:shadow-2xl transition-all group flex flex-col gap-6">
+                       <div key={s.id} className="p-6 md:p-8 bg-slate-900/60 backdrop-blur-md rounded-[32px] border border-slate-850 hover:border-slate-800 hover:shadow-2xl transition-all group flex flex-col gap-6">
                           <div className="flex justify-between items-start">
-                             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-600 transition-all shrink-0"><Factory size={24} /></div>
-                             <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase tracking-widest">Homologado</div>
+                             <div className="w-12 h-12 bg-slate-950 text-slate-400 border border-slate-850 rounded-2xl flex items-center justify-center transition-all shrink-0"><Factory size={24} /></div>
+                             <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black rounded-full uppercase tracking-widest">Homologado</div>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">{s.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold font-mono mt-1 truncate">{s.taxId}</p>
+                            <p className="text-lg font-black text-white uppercase tracking-tight truncate">{s.name}</p>
+                            <p className="text-[10px] text-slate-500 font-bold font-mono mt-1 truncate">{s.taxId}</p>
                           </div>
-                          <div className="grid grid-cols-1 gap-3 border-t border-slate-50 pt-6">
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Users size={14} className="text-blue-500 shrink-0" /> {s.contactName}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Mail size={14} className="text-blue-500 shrink-0" /> {s.email}</div>
-                             <div className="flex items-center gap-3 text-xs text-slate-600 truncate"><Phone size={14} className="text-blue-500 shrink-0" /> {s.phone}</div>
+                          <div className="grid grid-cols-1 gap-3 border-t border-slate-850 pt-6">
+                             <div className="flex items-center gap-3 text-xs text-slate-300 truncate"><Users size={14} className="text-red-500 shrink-0" /> {s.contactName}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-300 truncate"><Mail size={14} className="text-red-500 shrink-0" /> {s.email}</div>
+                             <div className="flex items-center gap-3 text-xs text-slate-300 truncate"><Phone size={14} className="text-red-500 shrink-0" /> {s.phone}</div>
                              {s.equipmentId && (
-                               <div className="flex items-center gap-3 text-xs text-blue-600 font-bold truncate">
-                                 <HardDrive size={14} className="shrink-0" /> 
+                               <div className="flex items-center gap-3 text-xs text-red-400 font-bold truncate">
+                                 <HardDrive size={14} className="shrink-0 text-red-500" /> 
                                  {equipments.find(e => e.id === s.equipmentId)?.name || 'Equipamento não encontrado'}
                                </div>
                              )}
@@ -1028,15 +1066,15 @@ export default function App() {
             </div>
           )}
 
-          <footer className="mt-auto py-12 text-center border-t border-slate-100">
-             <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">
+          <footer className="mt-auto py-12 text-center border-t border-slate-900">
+             <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">
                © 2025 — TODOS OS DIREITOS RESERVADOS A ANTONIO SINRON NERI DA SILVA
              </p>
           </footer>
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-100 flex items-center justify-around h-20 px-4 z-50 shadow-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-lg border-t border-slate-900 flex items-center justify-around h-20 px-4 z-50 shadow-2xl">
         <MobileNavItem icon={LayoutDashboard} label="Painel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         <MobileNavItem icon={Wrench} label="Ativos" active={activeTab === 'equipment'} onClick={() => setActiveTab('equipment')} />
         <MobileNavItem icon={Users} label="Empresas" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
@@ -1051,66 +1089,66 @@ export default function App() {
         >
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">CNPJ / CPF</p>
-                <p className="text-xs font-bold text-slate-800">{viewingCustomer.taxId}</p>
+              <div className="bg-slate-950/65 p-4 rounded-2xl border border-slate-850">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">CNPJ / CPF</p>
+                <p className="text-xs font-bold text-white font-mono">{viewingCustomer.taxId}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Contato</p>
-                <p className="text-xs font-bold text-slate-800">{viewingCustomer.phone}</p>
+              <div className="bg-slate-950/65 p-4 rounded-2xl border border-slate-850">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Contato</p>
+                <p className="text-xs font-bold text-white">{viewingCustomer.phone || "Não informado"}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">E-mail</p>
-                <p className="text-xs font-bold text-slate-800">{viewingCustomer.email}</p>
+              <div className="bg-slate-950/65 p-4 rounded-2xl border border-slate-850">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">E-mail</p>
+                <p className="text-xs font-bold text-white truncate">{viewingCustomer.email || "Não informado"}</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
                 <HardDrive size={14} /> Equipamentos Vinculados ({equipments.filter(e => e.customerId === viewingCustomer.id).length})
               </h4>
               
               <div className="grid grid-cols-1 gap-4">
                 {equipments.filter(e => e.customerId === viewingCustomer.id).length > 0 ? (
                   equipments.filter(e => e.customerId === viewingCustomer.id).map(equip => (
-                    <div key={equip.id} className="bg-white border border-slate-100 rounded-[24px] p-5 hover:shadow-md transition-all">
+                    <div key={equip.id} className="bg-slate-950/60 border border-slate-850 rounded-[24px] p-5 hover:shadow-2xl transition-all">
                       <div className="flex flex-col md:flex-row justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
-                            <h5 className="font-black text-slate-800 text-sm uppercase">{equip.name}</h5>
+                            <h5 className="font-black text-white text-sm uppercase">{equip.name}</h5>
                             <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${getStatusBadge(equip.status as EquipmentStatus)}`}>
                               {equip.status}
                             </span>
                           </div>
-                          <p className="text-[10px] text-slate-400 font-mono font-bold uppercase mb-3">{equip.code} | S/N: {equip.serialNumber}</p>
+                          <p className="text-[10px] text-slate-550 font-mono font-bold uppercase mb-3">{equip.code} | S/N: {equip.serialNumber}</p>
                           <AttachmentList attachments={equip.attachments} label="Documentos do Equipamento" />
                           
                           <div className="space-y-3">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Histórico de Serviços</p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Histórico de Serviços</p>
                             {equip.serviceRecords && equip.serviceRecords.length > 0 ? (
                               <div className="space-y-2">
                                 {equip.serviceRecords.slice(0, 3).map(record => (
-                                  <div key={record.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                  <div key={record.id} className="bg-slate-950 p-3 rounded-xl border border-slate-850">
                                     <div className="flex justify-between items-start mb-1">
-                                      <span className="text-[9px] font-black text-blue-600 uppercase italic">{record.serviceType}</span>
-                                      <span className="text-[9px] font-bold text-slate-400">{formatDate(record.date)}</span>
+                                      <span className="text-[9px] font-black text-red-500 uppercase italic">{record.serviceType}</span>
+                                      <span className="text-[9px] font-bold text-slate-500">{formatDate(record.date)}</span>
                                     </div>
-                                    <p className="text-[11px] text-slate-700 font-medium leading-relaxed">"{record.description}"</p>
+                                    <p className="text-[11px] text-slate-300 font-medium font-inter leading-relaxed">"{record.description}"</p>
                                     <AttachmentList attachments={record.attachments} label="Anexos do Serviço" />
                                     {record.resolution && (
-                                      <div className="mt-2 pt-2 border-t border-slate-200">
-                                        <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Resolução:</p>
-                                        <p className="text-[10px] text-slate-600 italic">{record.resolution}</p>
+                                      <div className="mt-2 pt-2 border-t border-slate-850">
+                                        <p className="text-[9px] font-black text-emerald-505 uppercase mb-1">Resolução:</p>
+                                        <p className="text-[10px] text-slate-400 italic">"{record.resolution}"</p>
                                       </div>
                                     )}
                                   </div>
                                 ))}
                                 {equip.serviceRecords.length > 3 && (
-                                  <p className="text-[9px] text-center text-slate-400 font-bold uppercase tracking-widest">+ {equip.serviceRecords.length - 3} outros registros</p>
+                                  <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest">+ {equip.serviceRecords.length - 3} outros registros</p>
                                 )}
                               </div>
                             ) : (
-                              <p className="text-[10px] text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">Nenhum serviço registrado para este equipamento.</p>
+                              <p className="text-[10px] text-slate-500 italic bg-slate-950 p-3 rounded-xl border border-dashed border-slate-850">Nenhum serviço registrado para este equipamento.</p>
                             )}
                           </div>
                         </div>
@@ -1118,9 +1156,9 @@ export default function App() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
-                    <HardDrive size={32} className="mx-auto text-slate-300 mb-3" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum equipamento vinculado a esta unidade.</p>
+                  <div className="text-center py-12 bg-slate-950/40 rounded-[32px] border border-dashed border-slate-850">
+                    <HardDrive size={32} className="mx-auto text-slate-600 mb-3" />
+                    <p className="text-xs font-bold text-slate-550 uppercase tracking-widest">Nenhum equipamento vinculado a esta unidade.</p>
                   </div>
                 )}
               </div>
@@ -1611,7 +1649,7 @@ function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) 
   return (
     <button 
       onClick={() => onClick(id)} 
-      className={`w-full py-3 px-2 lg:px-4 flex flex-col lg:flex-row items-center lg:justify-start gap-1.5 lg:gap-3 rounded-2xl transition-all relative group ${active ? 'bg-white text-[#005ca9] shadow-xl shadow-blue-900/20' : color || 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
+      className={`w-full py-3 px-2 lg:px-4 flex flex-col lg:flex-row items-center lg:justify-start gap-1.5 lg:gap-3 rounded-2xl transition-all relative group ${active ? 'bg-red-650 text-white shadow-xl shadow-red-900/40 border border-red-500/50' : color || 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
     >
       <Icon size={18} strokeWidth={active ? 2.5 : 2} className="shrink-0" />
       <span className="text-[9px] lg:text-xs font-black uppercase tracking-wider text-center lg:text-left truncate w-full max-w-full leading-tight">
@@ -1623,7 +1661,7 @@ function SidebarIcon({ icon: Icon, label, id, activeTab, onClick, color }: any) 
 
 function MobileNavItem({ icon: Icon, label, active, onClick }: any) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center gap-1 w-20 transition-all ${active ? 'text-red-600 scale-110' : 'text-slate-300'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center justify-center gap-1 w-20 transition-all ${active ? 'text-red-500 scale-110' : 'text-slate-500 hover:text-slate-300'}`}>
       <Icon size={20} strokeWidth={active ? 2.5 : 2} />
       <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
     </button>
@@ -1632,19 +1670,19 @@ function MobileNavItem({ icon: Icon, label, active, onClick }: any) {
 
 function StatCard({ label, value, icon: Icon, color }: any) {
   const colors: any = {
-    blue: 'bg-slate-50 text-slate-800 border-slate-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    indigo: 'bg-red-50 text-red-600 border-red-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    amber: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+    indigo: 'bg-red-500/10 text-red-500 border-red-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
   };
   return (
-    <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all">
+    <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-[28px] border border-slate-800 shadow-xl flex flex-col gap-4 group hover:shadow-2xl hover:border-slate-700/60 transition-all">
       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${colors[color]}`}>
         <Icon size={18} strokeWidth={2.5} />
       </div>
       <div>
-        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">{label}</p>
-        <p className="text-2xl font-black text-slate-800 tracking-tighter">{value}</p>
+        <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1">{label}</p>
+        <p className="text-2xl font-black text-white tracking-tighter">{value}</p>
       </div>
     </div>
   );
@@ -1655,7 +1693,7 @@ function AttachmentList({ attachments, label }: { attachments?: Attachment[], la
   
   return (
     <div className="space-y-2 mt-3">
-      {label && <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{label}</p>}
+      {label && <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{label}</p>}
       <div className="flex flex-wrap gap-2">
         {attachments.map(att => (
           <a 
@@ -1664,9 +1702,9 @@ function AttachmentList({ attachments, label }: { attachments?: Attachment[], la
             download={att.name}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm group"
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-bold text-slate-300 hover:text-red-500 hover:border-red-550/40 transition-all shadow-sm group"
           >
-            {att.type.includes('image') ? <ImageIcon size={12} className="text-blue-500" /> : <FileText size={12} className="text-slate-400" />}
+            {att.type.includes('image') ? <ImageIcon size={12} className="text-red-500" /> : <FileText size={12} className="text-slate-400" />}
             <span className="max-w-[120px] truncate">{att.name}</span>
             <Download size={10} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
@@ -1701,20 +1739,20 @@ function FileUploader({ attachments, onUpload, onRemove, label = "Documentos e I
 
   return (
     <div className="space-y-3">
-      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
       <div className="grid grid-cols-1 gap-2">
         {attachments.map(att => (
-          <div key={att.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+          <div key={att.id} className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl group">
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="p-2 bg-white rounded-lg text-blue-500 shadow-sm">
+              <div className="p-2 bg-slate-900 rounded-lg text-red-500 shadow-sm border border-slate-850">
                 {att.type.includes('image') ? <ImageIcon size={14} /> : <FileText size={14} />}
               </div>
-              <span className="text-[10px] font-bold text-slate-700 truncate">{att.name}</span>
+              <span className="text-[10px] font-bold text-slate-300 truncate">{att.name}</span>
             </div>
             <button 
               type="button" 
               onClick={() => onRemove(att.id)}
-              className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
             >
               <Trash2 size={14} />
             </button>
@@ -1723,9 +1761,9 @@ function FileUploader({ attachments, onUpload, onRemove, label = "Documentos e I
         <button 
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 text-slate-400 hover:bg-slate-50 hover:border-blue-300 transition-all group"
+          className="w-full py-4 border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center gap-3 text-slate-500 hover:bg-slate-900 hover:border-red-500 hover:text-slate-200 transition-all group"
         >
-          <Upload size={18} className="group-hover:scale-110 transition-transform" />
+          <Upload size={18} className="group-hover:scale-110 transition-transform text-red-500" />
           <span className="text-[10px] font-black uppercase tracking-widest">Anexar Arquivos (PDF/IMG)</span>
         </button>
         <input 
@@ -1743,13 +1781,13 @@ function FileUploader({ attachments, onUpload, onRemove, label = "Documentos e I
 
 function Modal({ title, children, onClose, className = "max-w-lg" }: any) {
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-4">
-      <div className={`bg-white rounded-t-[40px] md:rounded-[40px] w-full ${className} shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200`}>
-        <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{title}</h3>
-          <button onClick={onClose} className="p-2 text-slate-300 hover:text-red-500 bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[80] flex items-end md:items-center justify-center p-4">
+      <div className={`bg-slate-900 border border-slate-800 rounded-t-[40px] md:rounded-[40px] w-full ${className} shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200`}>
+        <div className="px-8 py-6 border-b border-slate-800/60 flex items-center justify-between">
+          <h3 className="text-[10px] font-black text-white uppercase tracking-widest">{title}</h3>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-500 bg-slate-950/60 rounded-xl transition-colors border border-slate-850"><X size={20} /></button>
         </div>
-        <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">{children}</div>
+        <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar text-slate-200">{children}</div>
       </div>
     </div>
   );
@@ -1759,7 +1797,7 @@ function FormInput({ label, ...props }: any) {
   return (
     <div className="space-y-1.5">
       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-      <input {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-red-500 outline-none transition-all text-xs font-bold" />
+      <input {...props} className="w-full px-5 py-4 bg-slate-950/60 border border-slate-800 rounded-2xl focus:border-red-500 outline-none transition-all text-xs font-bold text-white placeholder:text-slate-650" />
     </div>
   );
 }
@@ -1768,7 +1806,7 @@ function FormSelect({ label, options, ...props }: any) {
   return (
     <div className="space-y-1.5">
       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-      <select {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-red-500 outline-none text-xs font-bold appearance-none cursor-pointer">
+      <select {...props} className="w-full px-5 py-4 bg-slate-950/60 border border-slate-800 rounded-2xl focus:border-red-500 outline-none text-xs font-bold appearance-none cursor-pointer text-white [&>option]:bg-slate-900 [&>option]:text-white">
         {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -1779,18 +1817,137 @@ function FormTextArea({ label, ...props }: any) {
   return (
     <div className="space-y-1.5">
       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-      <textarea rows={3} {...props} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-red-500 outline-none transition-all text-xs font-medium resize-none" />
+      <textarea rows={3} {...props} className="w-full px-5 py-4 bg-slate-950/60 border border-slate-800 rounded-2xl focus:border-red-500 outline-none transition-all text-xs font-medium resize-none text-white placeholder:text-slate-650" />
     </div>
   );
 }
 
 function getStatusBadge(status: EquipmentStatus) {
   switch (status) {
-    case EquipmentStatus.PENDING: return 'bg-amber-50 text-amber-600 border-amber-100';
-    case EquipmentStatus.IN_PROGRESS: return 'bg-blue-50 text-blue-600 border-blue-100';
-    case EquipmentStatus.COMPLETED: return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-    case EquipmentStatus.READY: return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-    case EquipmentStatus.DELIVERED: return 'bg-slate-100 text-slate-600 border-slate-200';
-    default: return 'bg-slate-50 text-slate-700 border-slate-100';
+    case EquipmentStatus.PENDING: return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    case EquipmentStatus.IN_PROGRESS: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    case EquipmentStatus.COMPLETED: return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    case EquipmentStatus.READY: return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+    case EquipmentStatus.DELIVERED: return 'bg-slate-500/15 text-slate-350 border-slate-500/20';
+    default: return 'bg-slate-500/10 text-slate-400 border-slate-800';
   }
+}
+
+interface LoginScreenProps {
+  onLogin: (user: User) => void;
+  brandConfig: BrandConfig;
+}
+
+function LoginScreen({ onLogin, brandConfig }: LoginScreenProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if ((cleanEmail === 'admin' || cleanEmail === 'admin@alvs.com') && password === 'admin') {
+      const adminUser: User = {
+        id: 'u-admin',
+        name: 'Administrador ALVS',
+        email: 'admin@alvs.com',
+        phone: '(11) 98888-8888',
+        role: UserRole.ADMIN
+      };
+      onLogin(adminUser);
+    } else {
+      setErrorCode('Usuário ou senha incorretos.');
+    }
+  };
+
+  const autofillAdmin = () => {
+    setEmail('admin@alvs.com');
+    setPassword('admin');
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-6 relative overflow-hidden font-inter text-slate-100">
+      {/* Background visual decoration */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-red-600/10 rounded-full blur-[120px] pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none translate-x-1/2 translate-y-1/2" />
+
+      <div className="w-full max-w-md bg-slate-950/40 backdrop-blur-md rounded-[40px] border border-slate-800 p-8 shadow-2xl relative z-10 space-y-8">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 bg-slate-900 border border-slate-850 rounded-3xl mx-auto flex items-center justify-center p-3 shadow-inner">
+            {brandConfig.logoUrl ? (
+              <img src={brandConfig.logoUrl} alt="Logo" className="max-h-12 w-auto object-contain" />
+            ) : (
+              <Shield size={36} className="text-red-500" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-white">{brandConfig.name} {brandConfig.slogan}</h2>
+            <p className="text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase mt-1">Clinical Engineering & Medical Solutions</p>
+          </div>
+        </div>
+
+        {errorCode && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-xs text-red-400 font-bold">
+            <AlertCircle size={16} className="shrink-0 animate-bounce" />
+            <span>{errorCode}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail ou Usuário</label>
+            <div className="relative">
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-550" size={16} />
+              <input
+                type="text"
+                required
+                placeholder="ex: admin@alvs.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-11 pr-5 py-4 bg-slate-900/60 border border-slate-800 rounded-2xl focus:border-red-500 focus:bg-slate-900 outline-none transition-all text-xs font-bold text-white placeholder:text-slate-600 shadow-md"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha de Acesso</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-550" size={16} />
+              <input
+                type="password"
+                required
+                placeholder="Sua senha secreta"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-11 pr-5 py-4 bg-slate-900/60 border border-slate-800 rounded-2xl focus:border-red-500 focus:bg-slate-900 outline-none transition-all text-xs font-bold text-white placeholder:text-slate-600 shadow-md"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-4.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-xl active:scale-[0.98] mt-6 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Acessar Sistema <ArrowRight size={14} />
+          </button>
+        </form>
+
+        <div className="pt-6 border-t border-slate-900 text-center space-y-3">
+          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block">Credenciais Administrativas de Teste</span>
+          <button
+            onClick={autofillAdmin}
+            className="px-4 py-2 border-slate-800 bg-slate-900/40 rounded-xl text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-white hover:bg-slate-850 hover:border-slate-750 transition-all border cursor-pointer"
+          >
+            Preencher como Admin (admin / admin)
+          </button>
+        </div>
+      </div>
+
+      <footer className="mt-12 text-center">
+         <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">
+           © 2025 — TODOS OS DIREITOS RESERVADOS A ANTONIO SINRON NERI DA SILVA
+         </p>
+      </footer>
+    </div>
+  );
 }

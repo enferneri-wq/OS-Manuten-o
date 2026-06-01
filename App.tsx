@@ -94,6 +94,7 @@ export default function App() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [tempAttachments, setTempAttachments] = useState<Attachment[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -356,6 +357,23 @@ export default function App() {
     setNewCustomerEquipAttachments([]);
     setSelectedCompanyId(newCustId); // Auto-select the newly created company
     setIsCustomerModalOpen(false);
+  };
+
+  const handleDeleteCustomer = (customerId: string) => {
+    setCustomers(prev => {
+      const updated = prev.filter(c => c.id !== customerId);
+      if (selectedCompanyId === customerId) {
+        if (updated.length > 0) {
+          setSelectedCompanyId(updated[0].id);
+        } else {
+          setSelectedCompanyId(null);
+          setSelectedCompanyEquipId(null);
+        }
+      }
+      return updated;
+    });
+    setEquipments(prev => prev.filter(e => e.customerId !== customerId));
+    setCustomerToDelete(null);
   };
 
   const handleAddSupplier = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -735,18 +753,30 @@ export default function App() {
                                 {isActive && (
                                   <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                                 )}
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2.5 rounded-xl flex items-center justify-center transition-all ${
-                                    isActive ? 'bg-red-600 text-white shadow-md' : 'bg-slate-950 text-slate-500 border border-slate-850'
-                                  }`}>
-                                    <Building2 size={16} />
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`p-2.5 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                                      isActive ? 'bg-red-600 text-white shadow-md' : 'bg-slate-950 text-slate-500 border border-slate-850'
+                                    }`}>
+                                      <Building2 size={16} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className={`text-xs font-black uppercase tracking-tight truncate leading-tight transition-all ${
+                                        isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'
+                                      }`}>{c.name}</p>
+                                      <p className="text-[10px] font-bold font-mono text-slate-500 mt-0.5 truncate">{c.taxId}</p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className={`text-xs font-black uppercase tracking-tight truncate leading-tight transition-all ${
-                                      isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'
-                                    }`}>{c.name}</p>
-                                    <p className="text-[10px] font-bold font-mono text-slate-500 mt-0.5 truncate">{c.taxId}</p>
-                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCustomerToDelete(c);
+                                    }}
+                                    className="p-2 text-slate-550 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer shrink-0"
+                                    title="Excluir Empresa"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 </div>
                                 <div className="flex items-center justify-between pt-1 text-[10px] border-t border-slate-850">
                                   <span className="text-slate-500 font-medium font-inter">Ativos vinculados</span>
@@ -784,8 +814,15 @@ export default function App() {
                                     <span className="bg-red-500/10 text-red-400 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-red-500/20">Parceiro Oficial</span>
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                   <button onClick={() => setViewingCustomer(currentCompany)} className="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all cursor-pointer">Ver Detalhes</button>
+                                  <button
+                                    onClick={() => setCustomerToDelete(currentCompany)}
+                                    className="p-2.5 bg-red-950/20 hover:bg-red-650/30 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl transition-all cursor-pointer"
+                                    title="Excluir Empresa"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
                                 </div>
                               </div>
 
@@ -1446,6 +1483,45 @@ export default function App() {
 
             <button type="submit" className="w-full py-5 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-xl">Confirmar Cadastro</button>
           </form>
+        </Modal>
+      )}
+
+      {customerToDelete && (
+        <Modal 
+          title="Excluir Empresa" 
+          onClose={() => setCustomerToDelete(null)}
+          className="max-w-md"
+        >
+          <div className="space-y-6 text-center">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full flex items-center justify-center mx-auto shadow-inner mb-2 animate-bounce">
+              <Trash2 size={24} />
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="text-sm font-black text-white uppercase tracking-wider">Atenção! Ação Irreversível</h4>
+              <p className="text-xs text-slate-400 leading-relaxed font-semibold font-inter">
+                Você está prestes a excluir a empresa <span className="text-white font-bold">"{customerToDelete.name}"</span>. 
+                Isso removerá permanentemente todos os seus dados e equipamentos vinculados do banco de dados local.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={() => setCustomerToDelete(null)}
+                className="w-full sm:flex-1 py-4 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white font-bold uppercase rounded-2xl text-[10px] tracking-widest transition-all border border-slate-850 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleDeleteCustomer(customerToDelete.id)}
+                className="w-full sm:flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-red-500/10 hover:shadow-red-500/20 cursor-pointer"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

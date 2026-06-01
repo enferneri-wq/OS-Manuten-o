@@ -59,6 +59,7 @@ export interface ServiceRecord {
   isResolved: boolean;
   resolution: string;
   attachments?: Attachment[];
+  isDelivered?: boolean;
 }
 
 export interface Equipment {

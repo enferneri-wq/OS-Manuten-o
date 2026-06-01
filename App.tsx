@@ -9,7 +9,7 @@ import {
   Sparkles, RefreshCw, MapPin, Phone, Mail,
   Download, Briefcase, Factory, Settings,
   Upload, Trash2, Image as ImageIcon, Paperclip,
-  Lock, User as UserIcon, Shield
+  Lock, User as UserIcon, Shield, Pencil
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, 
@@ -95,6 +95,9 @@ export default function App() {
   
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingServiceRecord, setEditingServiceRecord] = useState<{ record: ServiceRecord; equipment: Equipment } | null>(null);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [tempAttachments, setTempAttachments] = useState<Attachment[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -376,6 +379,80 @@ export default function App() {
     setCustomerToDelete(null);
   };
 
+  const handleUpdateCustomer = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    const fd = new FormData(e.currentTarget);
+    const updatedCustomer: Customer = {
+      ...editingCustomer,
+      name: fd.get('name') as string,
+      taxId: fd.get('taxId') as string,
+      email: fd.get('email') as string,
+      phone: fd.get('phone') as string,
+      address: fd.get('address') as string,
+    };
+    setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? updatedCustomer : c));
+    setEditingCustomer(null);
+  };
+
+  const handleUpdateServiceRecord = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingServiceRecord) return;
+    const { record, equipment } = editingServiceRecord;
+    const fd = new FormData(e.currentTarget);
+    const isResolved = fd.get('isResolved') === 'on';
+    const isDelivered = fd.get('isDelivered') === 'on';
+
+    const updatedRecord: ServiceRecord = {
+      ...record,
+      serviceType: fd.get('serviceType') as string,
+      description: fd.get('description') as string,
+      resolution: fd.get('resolution') as string,
+      isResolved: isResolved,
+      isDelivered: isDelivered,
+    };
+
+    // Auto status update based on transition
+    let newStatus = EquipmentStatus.PENDING;
+    if (isDelivered) {
+      newStatus = EquipmentStatus.DELIVERED;
+    } else if (isResolved) {
+      newStatus = EquipmentStatus.READY;
+    }
+
+    setEquipments(prev => prev.map(eq => {
+      if (eq.id === equipment.id) {
+        const updatedRecords = eq.serviceRecords.map(r => r.id === record.id ? updatedRecord : r);
+        return { 
+          ...eq, 
+          status: newStatus,
+          serviceRecords: updatedRecords 
+        };
+      }
+      return eq;
+    }));
+
+    setEditingServiceRecord(null);
+  };
+
+  const handleUpdateEquipment = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingEquipment) return;
+    const fd = new FormData(e.currentTarget);
+    const updatedEquip: Equipment = {
+      ...editingEquipment,
+      name: fd.get('name') as string,
+      brand: fd.get('brand') as string,
+      model: fd.get('model') as string,
+      serialNumber: fd.get('serialNumber') as string,
+      observations: fd.get('observations') as string,
+      status: fd.get('status') as EquipmentStatus,
+      technicalReport: fd.get('technicalReport') as string,
+    };
+    setEquipments(prev => prev.map(eq => eq.id === editingEquipment.id ? updatedEquip : eq));
+    setEditingEquipment(null);
+  };
+
   const handleAddSupplier = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -397,9 +474,15 @@ export default function App() {
     if (!selectedEquipment) return;
     const fd = new FormData(e.currentTarget);
     const isResolved = fd.get('isResolved') === 'on';
+    const isDelivered = fd.get('isDelivered') === 'on';
     
-    // Automação: Se resolvido -> Aguardando Retirada. Se não -> Aguardando Serviço (Pendente)
-    const newStatus = isResolved ? EquipmentStatus.READY : EquipmentStatus.PENDING;
+    // Automação: Se entregue -> Entregue. Se apenas resolvido -> Aguardando Retirada. Se não -> Aguardando Serviço (Pendente)
+    let newStatus = EquipmentStatus.PENDING;
+    if (isDelivered) {
+      newStatus = EquipmentStatus.DELIVERED;
+    } else if (isResolved) {
+      newStatus = EquipmentStatus.READY;
+    }
 
     const newRecord: ServiceRecord = {
       id: generateUUID(), 
@@ -409,6 +492,7 @@ export default function App() {
       serviceType: fd.get('serviceType') as string,
       technicianId: 'u1',
       isResolved: isResolved,
+      isDelivered: isDelivered,
       resolution: fd.get('resolution') as string,
       attachments: tempAttachments
     };
@@ -767,16 +851,28 @@ export default function App() {
                                       <p className="text-[10px] font-bold font-mono text-slate-500 mt-0.5 truncate">{c.taxId}</p>
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCustomerToDelete(c);
-                                    }}
-                                    className="p-2 text-slate-550 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer shrink-0"
-                                    title="Excluir Empresa"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCustomer(c);
+                                      }}
+                                      className="p-2 text-slate-550 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all cursor-pointer"
+                                      title="Editar Empresa"
+                                    >
+                                      <Pencil size={14} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCustomerToDelete(c);
+                                      }}
+                                      className="p-2 text-slate-550 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
+                                      title="Excluir Empresa"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
                                 </div>
                                 <div className="flex items-center justify-between pt-1 text-[10px] border-t border-slate-850">
                                   <span className="text-slate-500 font-medium font-inter">Ativos vinculados</span>
@@ -816,6 +912,13 @@ export default function App() {
                                 </div>
                                 <div className="flex gap-2 items-center">
                                   <button onClick={() => setViewingCustomer(currentCompany)} className="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all cursor-pointer">Ver Detalhes</button>
+                                  <button 
+                                    onClick={() => setEditingCustomer(currentCompany)} 
+                                    className="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold uppercase rounded-xl text-[9px] tracking-widest transition-all cursor-pointer flex items-center gap-1"
+                                    title="Editar Empresa"
+                                  >
+                                    <Pencil size={11} /> Editar
+                                  </button>
                                   <button
                                     onClick={() => setCustomerToDelete(currentCompany)}
                                     className="p-2.5 bg-red-950/20 hover:bg-red-650/30 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl transition-all cursor-pointer"
@@ -964,7 +1067,15 @@ export default function App() {
                                   {/* Col 2: Informações Técnicas e Última Manutenção */}
                                   <div className="space-y-6">
                                     <div className="space-y-4">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Especificações do Sistema</p>
+                                      <div className="flex justify-between items-center px-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Especificações do Sistema</p>
+                                        <button 
+                                          onClick={() => setEditingEquipment(selectedEquip)}
+                                          className="text-[9px] font-black text-red-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-1.5 transition-all cursor-pointer"
+                                        >
+                                          <Pencil size={11} /> Editar Ativo
+                                        </button>
+                                      </div>
                                       <div className="bg-slate-950 p-4 rounded-2xl space-y-2 border border-slate-850">
                                         <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Identificação:</span> <span className="font-bold text-white font-mono uppercase">{selectedEquip.code}</span></div>
                                         <div className="flex justify-between text-xs font-medium"><span className="text-slate-500">Nº de Série:</span> <span className="font-bold text-white font-mono">{selectedEquip.serialNumber}</span></div>
@@ -1525,6 +1636,228 @@ export default function App() {
         </Modal>
       )}
 
+      {editingCustomer && (
+        <Modal 
+          title="Editar Empresa / Unidade de Saúde" 
+          onClose={() => setEditingCustomer(null)}
+          className="max-w-lg"
+        >
+          <form onSubmit={handleUpdateCustomer} className="space-y-6">
+            <FormInput 
+              label="Razão Social / Nome" 
+              name="name" 
+              defaultValue={editingCustomer.name} 
+              required 
+            />
+            <FormInput 
+              label="CNPJ / CPF" 
+              name="taxId" 
+              defaultValue={editingCustomer.taxId} 
+              required 
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput 
+                label="Telefone" 
+                name="phone" 
+                defaultValue={editingCustomer.phone || ""} 
+              />
+              <FormInput 
+                label="E-mail" 
+                name="email" 
+                type="email" 
+                defaultValue={editingCustomer.email || ""} 
+              />
+            </div>
+            <FormTextArea 
+              label="Endereço" 
+              name="address" 
+              defaultValue={editingCustomer.address || ""} 
+            />
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={() => setEditingCustomer(null)}
+                className="w-1/2 py-4 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white font-bold uppercase rounded-2xl text-[10px] tracking-widest transition-all border border-slate-850 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                className="w-1/2 py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:shadow-lg transition-all cursor-pointer"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editingServiceRecord && (
+        <Modal 
+          title="Editar Registro de Manutenção" 
+          onClose={() => setEditingServiceRecord(null)}
+          className="max-w-lg"
+        >
+          <div className="bg-slate-50 p-6 rounded-[24px] mb-6 border border-slate-200">
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Equipamento Vinculado</p>
+            <p className="text-xs font-bold text-slate-800">
+              {editingServiceRecord.equipment.name} 
+              <span className="text-slate-450 font-mono text-xs ml-2">[{editingServiceRecord.equipment.code}]</span>
+            </p>
+          </div>
+          <form onSubmit={handleUpdateServiceRecord} className="space-y-6">
+            <FormInput 
+              label="Tipo de Serviço" 
+              name="serviceType" 
+              defaultValue={editingServiceRecord.record.serviceType} 
+              placeholder="Ex: Preventiva, Corretiva, Calibração" 
+              required 
+            />
+            <FormTextArea 
+              label="Descrição do Problema" 
+              name="description" 
+              defaultValue={editingServiceRecord.record.description} 
+              placeholder="Descreva o problema relatado..." 
+              required 
+            />
+            <FormTextArea 
+              label="O que foi feito (Resolução)" 
+              name="resolution" 
+              defaultValue={editingServiceRecord.record.resolution} 
+              placeholder="Descreva as ações tomadas para resolver o problema..." 
+              required 
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input 
+                  type="checkbox" 
+                  name="isResolved" 
+                  id="editIsResolved" 
+                  defaultChecked={editingServiceRecord.record.isResolved}
+                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                />
+                <label htmlFor="editIsResolved" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Problema Resolvido?</label>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input 
+                  type="checkbox" 
+                  name="isDelivered" 
+                  id="editIsDelivered" 
+                  defaultChecked={editingServiceRecord.record.isDelivered}
+                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                />
+                <label htmlFor="editIsDelivered" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Entregue ao Cliente?</label>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Atualização Automática de Status</p>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Se marcado como <b>Entregue ao Cliente</b>, o status do ativo mudará para <b>Entregue</b>.
+                Se marcado apenas como <b>Resolvido</b>, o status mudará para <b>Aguardando Retirada</b>.
+                Caso contrário, o status voltará para <b>Aguardando Serviço</b>.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={() => setEditingServiceRecord(null)}
+                className="w-1/2 py-4 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white font-bold uppercase rounded-2xl text-[10px] tracking-widest transition-all border border-slate-850 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                className="w-1/2 py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:shadow-lg transition-all cursor-pointer"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editingEquipment && (
+        <Modal 
+          title="Editar Equipamento / Ativo" 
+          onClose={() => setEditingEquipment(null)}
+          className="max-w-lg"
+        >
+          <form onSubmit={handleUpdateEquipment} className="space-y-6">
+            <FormInput 
+              label="Nome do Equipamento" 
+              name="name" 
+              defaultValue={editingEquipment.name} 
+              required 
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput 
+                label="Marca" 
+                name="brand" 
+                defaultValue={editingEquipment.brand} 
+              />
+              <FormInput 
+                label="Modelo" 
+                name="model" 
+                defaultValue={editingEquipment.model} 
+              />
+            </div>
+            <FormInput 
+              label="Nº de Série" 
+              name="serialNumber" 
+              defaultValue={editingEquipment.serialNumber} 
+              required 
+            />
+            
+            <FormSelect 
+              label="Situação do Ativo (Status)" 
+              name="status" 
+              defaultValue={editingEquipment.status}
+              options={[
+                { value: EquipmentStatus.PENDING, label: EquipmentStatus.PENDING },
+                { value: EquipmentStatus.IN_PROGRESS, label: EquipmentStatus.IN_PROGRESS },
+                { value: EquipmentStatus.COMPLETED, label: EquipmentStatus.COMPLETED },
+                { value: EquipmentStatus.READY, label: EquipmentStatus.READY },
+                { value: EquipmentStatus.DELIVERED, label: EquipmentStatus.DELIVERED },
+                { value: EquipmentStatus.CANCELLED, label: EquipmentStatus.CANCELLED },
+              ]}
+            />
+
+            <FormTextArea 
+              label="Observações de Entrada" 
+              name="observations" 
+              defaultValue={editingEquipment.observations || ""} 
+            />
+
+            <FormTextArea 
+              label="Parecer Técnico" 
+              name="technicalReport" 
+              defaultValue={editingEquipment.technicalReport || ""} 
+              placeholder="Se houver, declare o parecer técnico oficial..."
+            />
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={() => setEditingEquipment(null)}
+                className="w-1/2 py-4 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white font-bold uppercase rounded-2xl text-[10px] tracking-widest transition-all border border-slate-850 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                className="w-1/2 py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:shadow-lg transition-all cursor-pointer"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {isSupplierModalOpen && (
         <Modal title="Novo Fornecedor" onClose={() => setIsSupplierModalOpen(false)}>
           <form onSubmit={handleAddSupplier} className="space-y-6">
@@ -1551,16 +1884,24 @@ export default function App() {
             <FormInput label="Tipo de Serviço" name="serviceType" placeholder="Ex: Preventiva, Corretiva, Calibração" required />
             <FormTextArea label="Descrição do Problema" name="description" placeholder="Descreva o problema relatado..." required />
             <FormTextArea label="O que foi feito (Resolução)" name="resolution" placeholder="Descreva as ações tomadas para resolver o problema..." required />
-            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <input type="checkbox" name="isResolved" id="isResolved" className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-              <label htmlFor="isResolved" className="text-xs font-bold text-slate-700 uppercase tracking-widest">Problema Resolvido?</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input type="checkbox" name="isResolved" id="isResolved" className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                <label htmlFor="isResolved" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Problema Resolvido?</label>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input type="checkbox" name="isDelivered" id="isDelivered" className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                <label htmlFor="isDelivered" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Entregue ao Cliente?</label>
+              </div>
             </div>
             
             <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Atualização Automática de Status</p>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                Se marcado como <b>Resolvido</b>, o status mudará para <b>Aguardando Retirada</b>. 
-                Caso contrário, retornará para <b>Aguardando Serviço</b>.
+                Se marcado como <b>Entregue ao Cliente</b>, o status do ativo mudará para <b>Entregue</b>.
+                Se marcado apenas como <b>Resolvido</b>, o status mudará para <b>Aguardando Retirada</b>.
+                Caso contrário, o status voltará para <b>Aguardando Serviço</b>.
               </p>
             </div>
 
@@ -1649,7 +1990,18 @@ export default function App() {
                           <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-black">{selectedEquipment.serviceRecords.length - index}</span>
                           <span className="text-[9px] font-black text-blue-500 uppercase px-2.5 py-0.5 bg-blue-50 rounded italic border border-blue-100">{record.serviceType}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 font-mono">{formatDate(record.date)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">{formatDate(record.date)}</span>
+                          <button
+                            onClick={() => {
+                              setEditingServiceRecord({ record, equipment: selectedEquipment });
+                            }}
+                            className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-500 hover:bg-blue-50/80 px-2.5 py-1 rounded bg-blue-50 transition-all cursor-pointer border border-blue-100/50"
+                            title="Editar Serviço"
+                          >
+                            <Pencil size={10} /> Editar
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-50/80 pt-3">
@@ -1664,12 +2016,15 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-50/80 pt-3 flex-wrap gap-2">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Situação:</span>
                           {record.isResolved ? (
                             <span className="text-[9px] font-black text-emerald-600 uppercase flex items-center gap-1 px-2 py-0.5 bg-green-50 rounded-full border border-green-100"><CheckCircle2 size={12} /> Resolvido</span>
                           ) : (
                             <span className="text-[9px] font-black text-amber-600 uppercase flex items-center gap-1 px-2 py-0.5 bg-amber-50 rounded-full border border-amber-100"><AlertCircle size={12} /> Pendente</span>
+                          )}
+                          {record.isDelivered && (
+                            <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1 px-2 py-0.5 bg-blue-50 rounded-full border border-blue-100"><Users size={12} /> Entregue</span>
                           )}
                         </div>
 

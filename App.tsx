@@ -423,11 +423,15 @@ export default function App() {
     setEquipments(prev => prev.map(eq => {
       if (eq.id === equipment.id) {
         const updatedRecords = eq.serviceRecords.map(r => r.id === record.id ? updatedRecord : r);
-        return { 
+        const updatedEq = { 
           ...eq, 
           status: newStatus,
           serviceRecords: updatedRecords 
         };
+        if (selectedEquipment && selectedEquipment.id === equipment.id) {
+          setSelectedEquipment(updatedEq);
+        }
+        return updatedEq;
       }
       return eq;
     }));
@@ -450,6 +454,9 @@ export default function App() {
       technicalReport: fd.get('technicalReport') as string,
     };
     setEquipments(prev => prev.map(eq => eq.id === editingEquipment.id ? updatedEquip : eq));
+    if (selectedEquipment && selectedEquipment.id === editingEquipment.id) {
+      setSelectedEquipment(updatedEquip);
+    }
     setEditingEquipment(null);
   };
 
@@ -1936,10 +1943,17 @@ export default function App() {
                   <p className="text-[10px] text-slate-500 font-medium">S/N: {selectedEquipment.serialNumber} • Marca: {selectedEquipment.brand} • Modelo: {selectedEquipment.model || 'N/A'}</p>
                 </div>
               </div>
-              <div className="shrink-0 flex items-center gap-2">
+              <div className="shrink-0 flex items-center gap-3">
                 <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${getStatusBadge(selectedEquipment.status as EquipmentStatus)}`}>
                   {selectedEquipment.status}
                 </span>
+                <button
+                  onClick={() => setEditingEquipment(selectedEquipment)}
+                  className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-black font-black uppercase rounded-xl text-[9px] tracking-widest transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  title="Editar Dados do Equipamento"
+                >
+                  <Pencil size={11} /> Editar
+                </button>
               </div>
             </div>
 
